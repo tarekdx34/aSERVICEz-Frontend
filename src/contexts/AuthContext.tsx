@@ -1,53 +1,91 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { authApi, ApiError, type RegisterRequest, type UserProfile } from '../services/api';
 
-export type UserRole = 'customer' | 'expert';
+export type UserRole = 'customer' | 'expert' | 'admin' | 'customer_service';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  phone?: string;
   avatar?: string;
+  // Expert-specific
+  expertId?: number;
+  skills?: string;
+  specialization?: string;
+  rating?: number;
+  bio?: string;
+  // Customer-specific
+  loyaltyPoints?: number;
+  // Admin/CS-specific
+  adminId?: number;
+  csId?: number;
+  salary?: number;
+  employeeRank?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, accountType: UserRole) => Promise<boolean>;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (data: RegisterRequest) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo credentials
-const DEMO_USERS = {
-  expert: {
-    id: '1',
-    name: 'أحمد محمد',
-    email: 'expert@aservicea.com',
-    password: 'Expert123!',
-    role: 'expert' as UserRole,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed',
-  },
-  customer: {
-    id: '2',
-    name: 'سارة أحمد',
-    email: 'customer@aservicea.com',
-    password: 'Customer123!',
-    role: 'customer' as UserRole,
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sara',
-  },
-};
+function mapProfileToUser(profile: UserProfile): User {
+  return {
+    id: String(profile.userId),
+    name: profile.name,
+    email: profile.email,
+    role: profile.userType,
+    phone: profile.phone,
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.email}`,
+    loyaltyPoints: profile.loyaltyPoints,
+    expertId: profile.expertId,
+    skills: profile.skills,
+    specialization: profile.specialization,
+    rating: profile.rating,
+    bio: profile.bio,
+    adminId: profile.adminId,
+    salary: profile.salary,
+    employeeRank: profile.employeeRank,
+    csId: profile.csId,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
-    // Try to restore user from localStorage
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Restore session: if we have a token, fetch fresh profile
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && !user) {
+      setIsLoading(true);
+      authApi.getProfile()
+        .then((res) => {
+          const userData = mapProfileToUser(res.data);
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        })
+        .catch(() => {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, []);
 
   useEffect(() => {
-    // Save user to localStorage
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
     } else {
@@ -55,46 +93,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const login = async (email: string, password: string, accountType: UserRole): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await authApi.login({ email, password });
 
-    // Check demo credentials
-    const demoUser = DEMO_USERS[accountType];
-    if (email === demoUser.email && password === demoUser.password) {
-      const { password: _, ...userData } = demoUser;
+      // Extract token from response data
+      const token = (res.data as any)?.token || (res as any).token;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+
+      // Fetch user profile after login
+      const profileRes = await authApi.getProfile();
+      const userData = mapProfileToUser(profileRes.data);
       setUser(userData);
-      return true;
-    }
 
-    // For demo: allow any email/password combination if it looks valid
-    if (email.includes('@') && password.length >= 6) {
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: email.split('@')[0],
-        email,
-        role: accountType,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      };
-      setUser(newUser);
-      return true;
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof ApiError
+        ? err.message
+        : 'An unexpected error occurred';
+      return { success: false, error: message };
     }
+  };
 
-    return false;
+  const register = async (data: RegisterRequest): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await authApi.register(data);
+
+      // Extract token from response data
+      const token = (res.data as any)?.token || (res as any).token;
+      if (token) {
+        localStorage.setItem('token', token);
+
+        // Fetch user profile after registration
+        const profileRes = await authApi.getProfile();
+        const userData = mapProfileToUser(profileRes.data);
+        setUser(userData);
+      }
+
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof ApiError
+        ? err.message
+        : 'An unexpected error occurred';
+      return { success: false, error: message };
+    }
   };
 
   const logout = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      authApi.logout().catch(() => {});
+    }
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+  };
+
+  const refreshProfile = async () => {
+    try {
+      const profileRes = await authApi.getProfile();
+      const userData = mapProfileToUser(profileRes.data);
+      setUser(userData);
+    } catch {
+      // If profile fetch fails, log out
+      logout();
+    }
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
+    <AuthContext.Provider
+      value={{
+        user,
         isAuthenticated: !!user,
+        isLoading,
         login,
+        register,
         logout,
+        refreshProfile,
       }}
     >
       {children}

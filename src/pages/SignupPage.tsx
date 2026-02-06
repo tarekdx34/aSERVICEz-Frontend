@@ -1,29 +1,27 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { FormInput } from '../components/auth/FormInput';
 import { SocialButton } from '../components/auth/SocialButton';
 import { PasswordStrength } from '../components/auth/PasswordStrength';
-import { User, AtSign, Mail, Lock, Phone, ArrowRight, Loader2, ShoppingCart, Briefcase } from 'lucide-react';
+import { User, Mail, Lock, Phone, ArrowRight, Loader2, ShoppingCart, Briefcase } from 'lucide-react';
 import { 
   validateEmail, 
-  validateUsername, 
   validatePassword,
-  checkUsernameAvailability,
-  checkEmailAvailability 
 } from '../utils/validation';
 import logo from 'figma:asset/5641928ebf37f4553480c47d5388ea1a15d27a75.png';
 
 type AccountType = 'customer' | 'expert';
 
-type ValidationState = 'idle' | 'validating' | 'success' | 'error';
 
 export function SignupPage() {
   const { isRTL } = useLanguage();
+  const { register } = useAuth();
+  const navigate = useNavigate();
   const [accountType, setAccountType] = useState<AccountType>('customer');
   const [formData, setFormData] = useState({
     fullName: '',
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -33,81 +31,7 @@ export function SignupPage() {
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [validationStates, setValidationStates] = useState<Record<string, ValidationState>>({
-    username: 'idle',
-    email: 'idle',
-  });
   const [isLoading, setIsLoading] = useState(false);
-
-  // Real-time username validation
-  useEffect(() => {
-    const validateUsernameAsync = async () => {
-      if (!formData.username) {
-        setValidationStates(prev => ({ ...prev, username: 'idle' }));
-        return;
-      }
-
-      const validation = validateUsername(formData.username);
-      if (!validation.valid) {
-        setErrors(prev => ({ ...prev, username: validation.error || '' }));
-        setValidationStates(prev => ({ ...prev, username: 'error' }));
-        return;
-      }
-
-      setValidationStates(prev => ({ ...prev, username: 'validating' }));
-      
-      const isAvailable = await checkUsernameAvailability(formData.username);
-      if (isAvailable) {
-        setValidationStates(prev => ({ ...prev, username: 'success' }));
-        setErrors(prev => ({ ...prev, username: '' }));
-      } else {
-        setValidationStates(prev => ({ ...prev, username: 'error' }));
-        setErrors(prev => ({ 
-          ...prev, 
-          username: isRTL ? 'اسم المستخدم غير متاح' : 'Username is not available' 
-        }));
-      }
-    };
-
-    const timeoutId = setTimeout(validateUsernameAsync, 500);
-    return () => clearTimeout(timeoutId);
-  }, [formData.username, isRTL]);
-
-  // Real-time email validation
-  useEffect(() => {
-    const validateEmailAsync = async () => {
-      if (!formData.email) {
-        setValidationStates(prev => ({ ...prev, email: 'idle' }));
-        return;
-      }
-
-      if (!validateEmail(formData.email)) {
-        setErrors(prev => ({ 
-          ...prev, 
-          email: isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email address' 
-        }));
-        setValidationStates(prev => ({ ...prev, email: 'error' }));
-        return;
-      }
-
-      setValidationStates(prev => ({ ...prev, email: 'validating' }));
-      
-      const isAvailable = await checkEmailAvailability(formData.email);
-      if (isAvailable) {
-        setValidationStates(prev => ({ ...prev, email: 'success' }));
-        setErrors(prev => ({ ...prev, email: '' }));
-      } else {
-        setValidationStates(prev => ({ ...prev, email: 'error' }));
-        setErrors(prev => ({ 
-          ...prev, 
-          email: isRTL ? 'البريد الإلكتروني مستخدم بالفعل' : 'Email is already in use' 
-        }));
-      }
-    };
-
-    const timeoutId = setTimeout(validateEmailAsync, 500);
-    return () => clearTimeout(timeoutId);
-  }, [formData.email, isRTL]);
 
   // Password match validation
   useEffect(() => {
@@ -124,23 +48,19 @@ export function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Final validation
     const newErrors: Record<string, string> = {};
     
-    if (!formData.fullName || formData.fullName.length < 3) {
-      newErrors.fullName = isRTL ? 'الاسم يجب أن يكون 3 أحرف على الأقل' : 'Name must be at least 3 characters';
+    if (!formData.fullName || formData.fullName.length < 2) {
+      newErrors.fullName = isRTL ? 'الاسم يجب أن يكون حرفين على الأقل' : 'Name must be at least 2 characters';
     }
-    if (validationStates.username !== 'success') {
-      newErrors.username = isRTL ? 'اسم المستخدم غير صالح' : 'Invalid username';
-    }
-    if (validationStates.email !== 'success') {
+    if (!validateEmail(formData.email)) {
       newErrors.email = isRTL ? 'البريد الإلكتروني غير صالح' : 'Invalid email';
     }
     if (!validatePassword(formData.password).valid) {
       newErrors.password = isRTL ? 'كلمة المرور لا تستوفي المتطلبات' : 'Password does not meet requirements';
     }
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = isRTL ? 'كلمات ا��مرور غير متطابقة' : 'Passwords do not match';
+      newErrors.confirmPassword = isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match';
     }
     if (!formData.agreeToTerms) {
       newErrors.terms = isRTL ? 'يجب الموافقة على الشروط والأحكام' : 'You must agree to terms and conditions';
@@ -152,22 +72,40 @@ export function SignupPage() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Redirect based on account type
-      if (accountType === 'customer') {
-        window.location.href = '/';
+    setErrors({});
+
+    try {
+      const result = await register({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone || undefined,
+        userType: accountType,
+      });
+
+      if (result.success) {
+        if (accountType === 'customer') {
+          navigate('/');
+        } else {
+          navigate('/expert-setup');
+        }
       } else {
-        window.location.href = '/expert/onboarding';
+        setErrors({
+          general: result.error || (isRTL ? 'حدث خطأ أثناء إنشاء الحساب' : 'An error occurred while creating the account'),
+        });
       }
-    }, 2000);
+    } catch (error) {
+      setErrors({
+        general: isRTL ? 'حدث خطأ. حاول مرة أخرى' : 'An error occurred. Please try again',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isFormValid = 
-    formData.fullName.length >= 3 &&
-    validationStates.username === 'success' &&
-    validationStates.email === 'success' &&
+    formData.fullName.length >= 2 &&
+    validateEmail(formData.email) &&
     validatePassword(formData.password).valid &&
     formData.password === formData.confirmPassword &&
     formData.agreeToTerms;
@@ -310,21 +248,6 @@ export function SignupPage() {
             />
 
             <FormInput
-              label={isRTL ? 'اسم المستخدم' : 'Username'}
-              type="text"
-              placeholder={isRTL ? 'اختر اسم مستخدم فريد' : 'Choose a unique username'}
-              icon={<AtSign className="w-5 h-5" />}
-              value={formData.username}
-              onChange={(e) => {
-                setFormData({ ...formData, username: e.target.value });
-              }}
-              error={errors.username}
-              validationState={validationStates.username}
-              successMessage={isRTL ? 'متاح' : 'Available'}
-              isRTL={isRTL}
-            />
-
-            <FormInput
               label={isRTL ? 'البريد الإلكتروني' : 'Email'}
               type="email"
               placeholder="example@email.com"
@@ -332,10 +255,9 @@ export function SignupPage() {
               value={formData.email}
               onChange={(e) => {
                 setFormData({ ...formData, email: e.target.value });
+                if (errors.email) setErrors({ ...errors, email: '' });
               }}
               error={errors.email}
-              validationState={validationStates.email}
-              successMessage={isRTL ? 'صالح' : 'Valid'}
               isRTL={isRTL}
             />
 
@@ -429,6 +351,13 @@ export function SignupPage() {
                   : 'I want to receive offers and news via email'}
               </span>
             </label>
+
+            {/* General Error Message */}
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                {errors.general}
+              </div>
+            )}
 
             {/* Signup Button */}
             <button

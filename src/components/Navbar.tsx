@@ -1,4 +1,4 @@
-import { Search, Bell, Globe, Menu, User, Settings, ShoppingBag, LogOut, ChevronDown, Package } from "lucide-react";
+import { Search, Bell, Globe, Menu, User, Settings, ShoppingBag, LogOut, ChevronDown, Package, LayoutDashboard } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
@@ -108,9 +108,19 @@ export function Navbar({
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                 user?.role === 'expert' 
                                   ? 'bg-teal-100 text-teal-700' 
+                                  : user?.role === 'admin'
+                                  ? 'bg-red-100 text-red-700'
+                                  : user?.role === 'customer_service'
+                                  ? 'bg-orange-100 text-orange-700'
                                   : 'bg-blue-100 text-blue-700'
                               }`}>
-                                {user?.role === 'expert' ? (isRTL ? '👑 خبير' : '👑 Expert') : (isRTL ? '👤 عميل' : '👤 Customer')}
+                                {user?.role === 'expert' 
+                                  ? (isRTL ? '👑 خبير' : '👑 Expert') 
+                                  : user?.role === 'admin'
+                                  ? (isRTL ? '🛡️ مسؤول' : '🛡️ Admin')
+                                  : user?.role === 'customer_service'
+                                  ? (isRTL ? '🎧 خدمة عملاء' : '🎧 Support')
+                                  : (isRTL ? '👤 عميل' : '👤 Customer')}
                               </span>
                             </div>
                           </div>
@@ -124,6 +134,20 @@ export function Navbar({
                             >
                               <User className="w-4 h-4 text-gray-500" />
                               <span>{isRTL ? 'الملف الشخصي' : 'View Profile'}</span>
+                            </Link>
+
+                            <Link
+                              to={
+                                user?.role === 'expert' ? '/expert-dashboard'
+                                : user?.role === 'admin' ? '/admin-dashboard'
+                                : user?.role === 'customer_service' ? '/customer-service'
+                                : '/'
+                              }
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                              onClick={() => setShowUserMenu(false)}
+                            >
+                              <LayoutDashboard className="w-4 h-4 text-gray-500" />
+                              <span>{isRTL ? 'لوحة التحكم' : 'Dashboard'}</span>
                             </Link>
 
                             {user?.role === 'expert' && (

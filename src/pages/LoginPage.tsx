@@ -4,7 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { FormInput } from '../components/auth/FormInput';
 import { SocialButton } from '../components/auth/SocialButton';
-import { Mail, Lock, ArrowRight, Loader2, Zap } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import logo from 'figma:asset/5641928ebf37f4553480c47d5388ea1a15d27a75.png';
 
 export function LoginPage() {
@@ -14,7 +14,6 @@ export function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    accountType: 'customer' as 'customer' | 'expert',
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,20 +40,15 @@ export function LoginPage() {
     setErrors({});
 
     try {
-      const success = await login(formData.email, formData.password, formData.accountType);
+      const result = await login(formData.email, formData.password);
       
-      if (success) {
-        // Navigate based on account type
-        if (formData.accountType === 'expert') {
-          navigate('/add-service');
-        } else {
-          navigate('/');
-        }
+      if (result.success) {
+        navigate('/');
       } else {
         setErrors({
-          general: isRTL 
+          general: result.error || (isRTL 
             ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' 
-            : 'Invalid email or password',
+            : 'Invalid email or password'),
         });
       }
     } catch (error) {
@@ -68,34 +62,6 @@ export function LoginPage() {
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
-    // Handle social login
-  };
-
-  // Dev quick login functions
-  const handleDevLogin = async (role: 'customer' | 'expert' | 'admin') => {
-    setIsLoading(true);
-    try {
-      const emails = {
-        customer: 'customer@aservicea.com',
-        expert: 'expert@aservicea.com',
-        admin: 'admin@aservicea.com'
-      };
-      
-      await login(emails[role], 'password', role === 'admin' ? 'expert' : role);
-      
-      // Navigate based on role
-      if (role === 'expert') {
-        navigate('/expert-dashboard');
-      } else if (role === 'admin') {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/');
-      }
-    } catch (error) {
-      console.error('Dev login error:', error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -189,60 +155,6 @@ export function LoginPage() {
               isRTL={isRTL}
             />
 
-            {/* Account Type Selector */}
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                {isRTL ? 'نوع الحساب' : 'Account Type'}
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, accountType: 'customer' })}
-                  className={`px-4 py-3 border-2 rounded-lg text-sm font-medium transition-all ${
-                    formData.accountType === 'customer'
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 text-gray-600 hover:border-teal-300'
-                  }`}
-                >
-                  👤 {isRTL ? 'عميل' : 'Customer'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, accountType: 'expert' })}
-                  className={`px-4 py-3 border-2 rounded-lg text-sm font-medium transition-all ${
-                    formData.accountType === 'expert'
-                      ? 'border-teal-600 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 text-gray-600 hover:border-teal-300'
-                  }`}
-                >
-                  ⭐ {isRTL ? 'خبير' : 'Expert'}
-                </button>
-              </div>
-            </div>
-
-            {/* Demo Credentials Helper */}
-            {formData.accountType && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
-                <p className="font-semibold text-blue-900 mb-1">
-                  💡 {isRTL ? 'بيانات تجريبية:' : 'Demo Credentials:'}
-                </p>
-                <div className="text-blue-800 space-y-0.5">
-                  {formData.accountType === 'expert' ? (
-                    <>
-                      <p>📧 expert@aservicea.com</p>
-                      <p>🔐 Expert123!</p>
-                    </>
-                  ) : (
-                    <>
-                      <p>📧 customer@aservicea.com</p>
-                      <p>🔐 Customer123!</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Error Message */}
             {errors.general && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
@@ -305,42 +217,6 @@ export function LoginPage() {
               <SocialButton provider="google" isRTL={isRTL} onClick={() => handleSocialLogin('google')} />
               <SocialButton provider="facebook" isRTL={isRTL} onClick={() => handleSocialLogin('facebook')} />
               <SocialButton provider="apple" isRTL={isRTL} onClick={() => handleSocialLogin('apple')} />
-            </div>
-
-            {/* DEV: Quick Login Buttons */}
-            <div className="border-2 border-dashed border-purple-300 rounded-lg p-4 bg-purple-50">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-4 h-4 text-purple-600" />
-                <p className="text-xs font-semibold text-purple-900 uppercase">
-                  {isRTL ? 'وضع التطوير - تسجيل سريع' : 'Dev Mode - Quick Login'}
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDevLogin('customer')}
-                  disabled={isLoading}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  👤 {isRTL ? 'عميل' : 'Customer'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDevLogin('expert')}
-                  disabled={isLoading}
-                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ⭐ {isRTL ? 'خبير' : 'Expert'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDevLogin('admin')}
-                  disabled={isLoading}
-                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  🛡️ {isRTL ? 'مسؤول' : 'Admin'}
-                </button>
-              </div>
             </div>
 
             {/* Signup Link */}
