@@ -1,4 +1,4 @@
-import { Search, Bell, Globe, Menu, User, Settings, ShoppingBag, LogOut, ChevronDown, Package, LayoutDashboard } from "lucide-react";
+import { Bell, Globe, Menu, User, Settings, LogOut, ChevronDown, LayoutDashboard } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
@@ -34,26 +34,10 @@ export function Navbar({
 
           {/* Main Navigation */}
           <div className="hidden md:flex items-center gap-10">
-            <Link
-              to="/browse"
-              className="text-gray-700 hover:text-teal-600 transition-colors"
-            >
-              {isRTL ? "تصفح الخدمات" : "Browse Services"}
-            </Link>
-            <Link
-              to="#add"
-              className="text-gray-700 hover:text-teal-600 transition-colors"
-            >
-              {isRTL ? "أضف خدمة" : "Add Service"}
-            </Link>
           </div>
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4 space-x-reverse">
-            <button className="p-2 text-gray-600 hover:text-teal-600 transition-colors">
-              <Search className="w-5 h-5" />
-            </button>
-
             <button className="p-2 text-gray-600 hover:text-teal-600 transition-colors relative">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -69,13 +53,6 @@ export function Navbar({
             <div className="hidden md:flex items-center space-x-3 space-x-reverse">
               {isAuthenticated ? (
                 <>
-                  {user?.role === 'expert' && (
-                    <Link to="/add-service">
-                      <Button className="bg-teal-600 hover:bg-teal-700 text-white">
-                        {isRTL ? '+ إضافة خدمة' : '+ Add Service'}
-                      </Button>
-                    </Link>
-                  )}
                   
                   {/* User Avatar Dropdown */}
                   <div className="relative">
@@ -148,26 +125,6 @@ export function Navbar({
                             >
                               <LayoutDashboard className="w-4 h-4 text-gray-500" />
                               <span>{isRTL ? 'لوحة التحكم' : 'Dashboard'}</span>
-                            </Link>
-
-                            {user?.role === 'expert' && (
-                              <Link
-                                to="/my-services"
-                                className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
-                                onClick={() => setShowUserMenu(false)}
-                              >
-                                <Package className="w-4 h-4 text-gray-500" />
-                                <span>{isRTL ? 'خدماتي' : 'My Services'}</span>
-                              </Link>
-                            )}
-
-                            <Link
-                              to="/orders"
-                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
-                              onClick={() => setShowUserMenu(false)}
-                            >
-                              <ShoppingBag className="w-4 h-4 text-gray-500" />
-                              <span>{isRTL ? 'طلباتي' : 'My Orders'}</span>
                             </Link>
 
                             <Link
