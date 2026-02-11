@@ -32,12 +32,8 @@ export function BrowseServicesPage() {
     categories: searchParams.get('category') ? [searchParams.get('category')!] : [],
     subcategories: [],
     priceRange: [0, 500],
-    pricePresets: [],
     deliveryTime: [],
     rating: 0,
-    sellerLevel: [],
-    languages: [],
-    additionalOptions: [],
   });
 
   const [services, setServices] = useState<ServiceResponse[]>([]);
@@ -64,18 +60,12 @@ export function BrowseServicesPage() {
   const fetchServices = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Map sort values to API-supported ones
-      const apiSortBy = (sortBy === 'rating' || sortBy === 'bestseller') ? undefined : sortBy;
-
       const res = await serviceApi.list({
         page: currentPage,
         limit: servicesPerPage,
         search: filters.searchQuery || undefined,
         category: selectedSubcategory ? undefined : (selectedCategory || undefined),
         subcategory: selectedSubcategory || undefined,
-        minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
-        maxPrice: filters.priceRange[1] < 500 ? filters.priceRange[1] : undefined,
-        sortBy: apiSortBy !== 'relevant' ? apiSortBy : undefined,
       });
       let fetchedServices = res.data.services || [];
 
@@ -95,7 +85,7 @@ export function BrowseServicesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.searchQuery, selectedCategory, selectedSubcategory, filters.priceRange, sortBy]);
+  }, [currentPage, filters.searchQuery, selectedCategory, selectedSubcategory, sortBy]);
 
   useEffect(() => {
     fetchServices();
@@ -117,17 +107,6 @@ export function BrowseServicesPage() {
 
   // Apply client-side filters the API doesn't support
   const filteredServices = services.filter(service => {
-    // Price presets
-    if (filters.pricePresets.length > 0) {
-      const match = filters.pricePresets.some(preset => {
-        if (preset === '5') return service.price <= 5;
-        if (preset === '10-25') return service.price >= 10 && service.price <= 25;
-        if (preset === '25-50') return service.price >= 25 && service.price <= 50;
-        if (preset === '50+') return service.price >= 50;
-        return false;
-      });
-      if (!match) return false;
-    }
     // Delivery time
     if (filters.deliveryTime.length > 0 && service.deliveryTime) {
       const days = service.deliveryTime;
@@ -145,10 +124,9 @@ export function BrowseServicesPage() {
     if (filters.rating > 0 && (service.rating == null || service.rating < filters.rating)) {
       return false;
     }
-    // Seller level
-    if (filters.sellerLevel.length > 0 && service.expert?.badge) {
-      if (!filters.sellerLevel.includes(service.expert.badge)) return false;
-    }
+    // Price range
+    if (filters.priceRange[0] > 0 && service.price < filters.priceRange[0]) return false;
+    if (filters.priceRange[1] < 500 && service.price > filters.priceRange[1]) return false;
     return true;
   });
 
@@ -160,12 +138,8 @@ export function BrowseServicesPage() {
       categories: [],
       subcategories: [],
       priceRange: [0, 500],
-      pricePresets: [],
       deliveryTime: [],
       rating: 0,
-      sellerLevel: [],
-      languages: [],
-      additionalOptions: [],
     });
     setCurrentPage(1);
   };
@@ -199,12 +173,8 @@ export function BrowseServicesPage() {
   // Count active filters
   const activeFilterCount = 
     filters.categories.length +
-    filters.pricePresets.length +
     filters.deliveryTime.length +
-    (filters.rating > 0 ? 1 : 0) +
-    filters.sellerLevel.length +
-    filters.languages.length +
-    filters.additionalOptions.length;
+    (filters.rating > 0 ? 1 : 0);
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>

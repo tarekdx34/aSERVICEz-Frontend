@@ -8,12 +8,8 @@ export interface AdvancedFilters {
   categories: string[];
   subcategories: string[];
   priceRange: [number, number];
-  pricePresets: string[];
   deliveryTime: string[];
   rating: number;
-  sellerLevel: string[];
-  languages: string[];
-  additionalOptions: string[];
 }
 
 interface AdvancedFilterSidebarProps {
@@ -41,9 +37,6 @@ export function AdvancedFilterSidebar({
     price: true,
     delivery: true,
     rating: true,
-    sellerLevel: true,
-    languages: false,
-    additional: false,
   });
 
   const [apiCategories, setApiCategories] = useState<CategoryResponse[]>([]);
@@ -216,28 +209,6 @@ export function AdvancedFilterSidebar({
                 />
               </div>
             </div>
-
-            {/* Price presets */}
-            <div className="space-y-2">
-              {[
-                { id: '5', label: '$5' },
-                { id: '10-25', label: '$10 - $25' },
-                { id: '25-50', label: '$25 - $50' },
-                { id: '50+', label: '$50+' },
-              ].map(preset => (
-                <label key={preset.id} className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={filters.pricePresets.includes(preset.id)}
-                    onChange={() => handleCheckbox('pricePresets', preset.id)}
-                    className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                  />
-                  <span className="text-sm text-gray-700 group-hover:text-teal-600">
-                    {preset.label}
-                  </span>
-                </label>
-              ))}
-            </div>
           </div>
         )}
       </div>
@@ -301,101 +272,6 @@ export function AdvancedFilterSidebar({
                 <span className="text-yellow-500">{rating.label}</span>
                 <span className="text-sm text-gray-700 group-hover:text-teal-600">
                   {rating.text}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-gray-200"></div>
-
-      {/* Seller Level */}
-      <div>
-        <SectionHeader 
-          title={isRTL ? 'مستوى الخبير' : 'Expert Level'} 
-          section="sellerLevel" 
-        />
-        {expandedSections.sellerLevel && (
-          <div className="space-y-2 pb-4">
-            {[
-              { id: 'new', label: isRTL ? 'جديد' : 'New', labelEn: 'New', icon: '' },
-              { id: 'seller', label: isRTL ? 'بائع' : 'Seller', labelEn: 'Seller', icon: '' },
-              { id: 'featured', label: isRTL ? 'بائع متميز' : 'Featured Seller', labelEn: 'Featured Seller', icon: '🏅' },
-              { id: 'pro', label: isRTL ? 'بائع محترف' : 'Pro Seller', labelEn: 'Pro Seller', icon: '👑' },
-            ].map(level => (
-              <label key={level.id} className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={filters.sellerLevel.includes(level.id)}
-                  onChange={() => handleCheckbox('sellerLevel', level.id)}
-                  className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                />
-                <span className="text-sm text-gray-700 group-hover:text-teal-600">
-                  {level.label} {level.icon}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-gray-200"></div>
-
-      {/* Languages */}
-      <div>
-        <SectionHeader 
-          title={isRTL ? 'لغة الخدمة' : 'Service Language'} 
-          section="languages" 
-        />
-        {expandedSections.languages && (
-          <div className="space-y-2 pb-4">
-            {[
-              { id: 'ar', label: isRTL ? 'العربية' : 'Arabic', labelEn: 'Arabic' },
-              { id: 'en', label: isRTL ? 'الإنجليزية' : 'English', labelEn: 'English' },
-              { id: 'fr', label: isRTL ? 'الفرنسية' : 'French', labelEn: 'French' },
-            ].map(lang => (
-              <label key={lang.id} className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={filters.languages.includes(lang.id)}
-                  onChange={() => handleCheckbox('languages', lang.id)}
-                  className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                />
-                <span className="text-sm text-gray-700 group-hover:text-teal-600">
-                  {lang.label}
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-gray-200"></div>
-
-      {/* Additional Options */}
-      <div>
-        <SectionHeader 
-          title={isRTL ? 'خيارات إضافية' : 'Additional Options'} 
-          section="additional" 
-        />
-        {expandedSections.additional && (
-          <div className="space-y-2 pb-4">
-            {[
-              { id: 'portfolio', label: isRTL ? 'خدمات مع عينات أعمال' : 'Services with portfolio', labelEn: 'Services with portfolio' },
-              { id: 'express', label: isRTL ? 'توصيل سريع متاح' : 'Express delivery available', labelEn: 'Express delivery available' },
-              { id: 'revisions', label: isRTL ? 'مراجعات مجانية' : 'Free revisions', labelEn: 'Free revisions' },
-              { id: 'online', label: isRTL ? 'الخبراء المتصلون الآن' : 'Experts online now', labelEn: 'Experts online now' },
-            ].map(option => (
-              <label key={option.id} className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={filters.additionalOptions.includes(option.id)}
-                  onChange={() => handleCheckbox('additionalOptions', option.id)}
-                  className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
-                />
-                <span className="text-sm text-gray-700 group-hover:text-teal-600">
-                  {option.label}
                 </span>
               </label>
             ))}

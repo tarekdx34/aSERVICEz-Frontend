@@ -22,27 +22,10 @@ export function ActiveFilters({
 
   // Categories
   filters.categories.forEach(cat => {
-    const labels: Record<string, { ar: string; en: string }> = {
-      design: { ar: 'تصميم وجرافيك', en: 'Design & Graphics' },
-      programming: { ar: 'برمجة وتطوير', en: 'Programming & Development' },
-      writing: { ar: 'كتابة وترجمة', en: 'Writing & Translation' },
-      marketing: { ar: 'تسويق رقمي', en: 'Digital Marketing' },
-      video: { ar: 'فيديو وأنيميشن', en: 'Video & Animation' },
-      business: { ar: 'أعمال', en: 'Business' },
-    };
     activeFiltersArray.push({
       type: 'categories',
       value: cat,
-      label: isRTL ? labels[cat]?.ar : labels[cat]?.en,
-    });
-  });
-
-  // Price presets
-  filters.pricePresets.forEach(preset => {
-    activeFiltersArray.push({
-      type: 'pricePresets',
-      value: preset,
-      label: `${isRTL ? 'السعر' : 'Price'}: ${preset}`,
+      label: `${isRTL ? 'فئة' : 'Category'}: ${cat}`,
     });
   });
 
@@ -70,50 +53,6 @@ export function ActiveFilters({
       label: `${isRTL ? 'التقييم' : 'Rating'}: ${filters.rating}+ ★`,
     });
   }
-
-  // Seller Level
-  filters.sellerLevel.forEach(level => {
-    const labels: Record<string, { ar: string; en: string }> = {
-      new: { ar: 'جديد', en: 'New' },
-      seller: { ar: 'بائع', en: 'Seller' },
-      featured: { ar: 'بائع متميز', en: 'Featured Seller' },
-      pro: { ar: 'بائع محترف', en: 'Pro Seller' },
-    };
-    activeFiltersArray.push({
-      type: 'sellerLevel',
-      value: level,
-      label: isRTL ? labels[level]?.ar : labels[level]?.en,
-    });
-  });
-
-  // Languages
-  filters.languages.forEach(lang => {
-    const labels: Record<string, { ar: string; en: string }> = {
-      ar: { ar: 'العربية', en: 'Arabic' },
-      en: { ar: 'الإنجليزية', en: 'English' },
-      fr: { ar: 'الفرنسية', en: 'French' },
-    };
-    activeFiltersArray.push({
-      type: 'languages',
-      value: lang,
-      label: isRTL ? labels[lang]?.ar : labels[lang]?.en,
-    });
-  });
-
-  // Additional options
-  filters.additionalOptions.forEach(option => {
-    const labels: Record<string, { ar: string; en: string }> = {
-      portfolio: { ar: 'مع عينات أعمال', en: 'With portfolio' },
-      express: { ar: 'توصيل سريع', en: 'Express delivery' },
-      revisions: { ar: 'مراجعات مجانية', en: 'Free revisions' },
-      online: { ar: 'متصلون الآن', en: 'Online now' },
-    };
-    activeFiltersArray.push({
-      type: 'additionalOptions',
-      value: option,
-      label: isRTL ? labels[option]?.ar : labels[option]?.en,
-    });
-  });
 
   if (activeFiltersArray.length === 0) return null;
 

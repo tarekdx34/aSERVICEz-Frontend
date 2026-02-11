@@ -141,9 +141,9 @@ export interface ServiceResponse {
 function normalizeService(s: any): ServiceResponse {
   return {
     ...s,
-    id: s.serviceId ?? s.id,
-    title: s.serviceName ?? s.title ?? '',
-    deliveryTime: s.duration ?? s.deliveryTime,
+    id: s.id ?? s.serviceId,
+    title: s.title ?? s.serviceName ?? '',
+    deliveryTime: s.deliveryTime ?? s.duration,
     thumbnail: s.thumbnail ? (s.thumbnail.startsWith('http') ? s.thumbnail : `${API_BASE_URL.replace('/api', '')}${s.thumbnail}`) : undefined,
     expert: s.expert ? {
       ...s.expert,
@@ -186,6 +186,7 @@ export interface SubcategoryResponse {
   subcategoryId: number;
   name: string;
   description?: string;
+  slug?: string;
   id: string;
 }
 
@@ -196,6 +197,7 @@ export interface CategoryResponse {
   iconUrl?: string;
   isActive?: boolean;
   subcategories?: SubcategoryResponse[];
+  slug?: string;
   // UI compat
   id: string;
   icon?: string;
@@ -206,13 +208,16 @@ export interface CategoryResponse {
 function normalizeCategory(c: any): CategoryResponse {
   return {
     ...c,
-    id: String(c.categoryId ?? c.id),
-    icon: c.iconUrl || c.icon,
+    categoryId: Number(c.id ?? c.categoryId),
+    id: String(c.id ?? c.categoryId),
+    icon: c.icon || c.iconUrl,
+    iconUrl: c.icon || c.iconUrl,
     nameEn: c.name,
     descriptionEn: c.description,
     subcategories: (c.subcategories || []).map((sc: any) => ({
       ...sc,
-      id: String(sc.subcategoryId ?? sc.id),
+      subcategoryId: Number(sc.id ?? sc.subcategoryId),
+      id: String(sc.id ?? sc.subcategoryId),
     })),
   };
 }
@@ -294,18 +299,21 @@ export const serviceApi = {
   async list(params: ServiceListParams = {}): Promise<ApiResponse<ServiceListData>> {
     const query = new URLSearchParams();
     if (params.search) query.set('keyword', params.search);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('size', String(params.limit));
 
-    const queryStr = query.toString();
     let url: string;
 
     if (params.search) {
-      url = `${API_BASE_URL}/services/search?${queryStr}`;
-    } else if (params.category) {
-      url = `${API_BASE_URL}/services/category/${params.category}`;
+      url = `${API_BASE_URL}/services/search?${query.toString()}`;
     } else if (params.subcategory) {
       url = `${API_BASE_URL}/services/subcategory/${params.subcategory}`;
+      if (params.page) url += `?page=${params.page}`;
+    } else if (params.category) {
+      url = `${API_BASE_URL}/services/category/${params.category}`;
+      if (params.page) url += `?page=${params.page}`;
     } else {
-      url = `${API_BASE_URL}/services`;
+      url = `${API_BASE_URL}/services?${query.toString()}`;
     }
 
     const response = await fetch(url, {
@@ -314,15 +322,16 @@ export const serviceApi = {
     });
     const res = await handleResponse<ApiResponse<any>>(response);
 
-    // Backend returns array directly for services list
+    // Backend returns { data: { services: [...], pagination: {...} } } or { data: [...] }
     const rawServices = Array.isArray(res.data) ? res.data : (res.data?.services || []);
     const services = rawServices.map(normalizeService);
+    const apiPagination = res.data?.pagination;
 
     return {
       ...res,
       data: {
         services,
-        pagination: res.data?.pagination || {
+        pagination: apiPagination || {
           currentPage: params.page || 1,
           totalPages: 1,
           totalItems: services.length,
@@ -400,7 +409,8 @@ export const categoryApi = {
       method: 'GET',
     });
     const res = await handleResponse<ApiResponse<any>>(response);
-    const raw = Array.isArray(res.data) ? res.data : [];
+    // API returns { data: { categories: [...] } }
+    const raw = Array.isArray(res.data) ? res.data : (res.data?.categories || []);
     return { ...res, data: raw.map(normalizeCategory) };
   },
 
@@ -409,7 +419,7 @@ export const categoryApi = {
       method: 'GET',
     });
     const res = await handleResponse<ApiResponse<any>>(response);
-    const raw = Array.isArray(res.data) ? res.data : [];
+    const raw = Array.isArray(res.data) ? res.data : (res.data?.categories || []);
     return { ...res, data: { categories: raw.map(normalizeCategory) } };
   },
 
@@ -496,16 +506,16 @@ export const adminApi = {
   },
 
   async createSubcategory(categoryId: number, data: { name: string; description?: string }): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/admin/categories/${categoryId}/subcategories`, {
+    const response = await fetch(`${API_BASE_URL}/admin/categories/subcategories`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, categoryId }),
     });
     return handleResponse<ApiResponse>(response);
   },
 
   async updateSubcategory(subcategoryId: number, data: { name?: string; description?: string }): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/admin/subcategories/${subcategoryId}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/categories/subcategories/${subcategoryId}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -514,7 +524,7 @@ export const adminApi = {
   },
 
   async deleteSubcategory(subcategoryId: number): Promise<ApiResponse> {
-    const response = await fetch(`${API_BASE_URL}/admin/subcategories/${subcategoryId}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/categories/subcategories/${subcategoryId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
