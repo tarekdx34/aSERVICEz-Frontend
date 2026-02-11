@@ -3,6 +3,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../services/api';
 import { Button } from '../components/ui/button';
 import {
   User,
@@ -15,7 +17,8 @@ import {
   ChevronRight,
   FileText,
   Image as ImageIcon,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 
 export function ExpertSetupPage() {
@@ -84,9 +87,24 @@ export function ExpertSetupPage() {
     }
   };
 
-  const handleComplete = () => {
-    alert(isRTL ? 'تم إعداد ملفك بنجاح!' : 'Profile setup completed successfully!');
-    navigate('/expert-dashboard');
+  const { refreshProfile } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+    try {
+      await authApi.updateProfile({
+        bio,
+        skills: skills.join(', '),
+        specialization: experienceLevel,
+      });
+      await refreshProfile();
+      navigate('/expert-dashboard');
+    } catch (err) {
+      alert(isRTL ? 'حدث خطأ أثناء حفظ الملف الشخصي' : 'Failed to save profile');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -471,9 +489,10 @@ export function ExpertSetupPage() {
             ) : (
               <Button
                 onClick={handleComplete}
+                disabled={isSubmitting}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                 {isRTL ? 'إنهاء الإعداد' : 'Complete Setup'}
               </Button>
             )}

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../ui/button';
+import { categoryApi, type CategoryResponse } from '../../services/api';
 
 export interface AdvancedFilters {
   searchQuery: string;
@@ -45,27 +46,28 @@ export function AdvancedFilterSidebar({
     additional: false,
   });
 
-  const categories = [
-    { id: 'design', label: isRTL ? 'تصميم وجرافيك' : 'Design & Graphics', labelEn: 'Design & Graphics', count: 1234, icon: '🎨' },
-    { id: 'programming', label: isRTL ? 'برمجة وتطوير' : 'Programming & Development', labelEn: 'Programming & Development', count: 892, icon: '💻' },
-    { id: 'writing', label: isRTL ? 'كتابة وترجمة' : 'Writing & Translation', labelEn: 'Writing & Translation', count: 654, icon: '✍️' },
-    { id: 'marketing', label: isRTL ? 'تسويق رقمي' : 'Digital Marketing', labelEn: 'Digital Marketing', count: 543, icon: '📱' },
-    { id: 'video', label: isRTL ? 'فيديو وأنيميشن' : 'Video & Animation', labelEn: 'Video & Animation', count: 421, icon: '🎬' },
-    { id: 'business', label: isRTL ? 'أعمال' : 'Business', labelEn: 'Business', count: 312, icon: '💼' },
-  ];
+  const [apiCategories, setApiCategories] = useState<CategoryResponse[]>([]);
 
-  const subcategories: Record<string, { id: string; label: string; labelEn: string }[]> = {
-    design: [
-      { id: 'logo', label: isRTL ? 'تصميم شعارات' : 'Logo Design', labelEn: 'Logo Design' },
-      { id: 'social', label: isRTL ? 'تصميم سوشيال ميديا' : 'Social Media Design', labelEn: 'Social Media Design' },
-      { id: 'ui', label: isRTL ? 'تصميم واجهات' : 'UI Design', labelEn: 'UI Design' },
-    ],
-    programming: [
-      { id: 'web', label: isRTL ? 'تطوير مواقع' : 'Web Development', labelEn: 'Web Development' },
-      { id: 'mobile', label: isRTL ? 'تطوير تطبيقات' : 'Mobile Apps', labelEn: 'Mobile Apps' },
-      { id: 'backend', label: isRTL ? 'برمجة خلفية' : 'Backend Development', labelEn: 'Backend Development' },
-    ],
-  };
+  useEffect(() => {
+    categoryApi.listWithSubcategories()
+      .then(res => setApiCategories(res.data.categories || []))
+      .catch(() => setApiCategories([]));
+  }, []);
+
+  const categories = apiCategories.map(cat => ({
+    id: String(cat.categoryId),
+    label: cat.name,
+    labelEn: cat.name,
+    icon: cat.iconUrl || '📁',
+  }));
+
+  // Get subcategories from the selected category
+  const selectedCatData = selectedCategory ? apiCategories.find(c => String(c.categoryId) === selectedCategory) : null;
+  const subcategoryList = (selectedCatData?.subcategories || []).map(sub => ({
+    id: String(sub.subcategoryId),
+    label: sub.name,
+    labelEn: sub.name,
+  }));
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -131,12 +133,8 @@ export function AdvancedFilterSidebar({
                   onChange={() => handleCheckbox('categories', cat.id)}
                   className="w-4 h-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                 />
-                <span className="text-xl">{cat.icon}</span>
                 <span className="text-sm text-gray-700 group-hover:text-teal-600 flex-1">
                   {cat.label}
-                </span>
-                <span className="text-xs text-gray-400">
-                  ({cat.count.toLocaleString(isRTL ? 'ar-SA' : 'en-US')})
                 </span>
               </label>
             ))}
@@ -147,7 +145,7 @@ export function AdvancedFilterSidebar({
       <div className="border-t border-gray-200"></div>
 
       {/* Subcategories (show when category selected) */}
-      {selectedCategory && subcategories[selectedCategory] && (
+      {selectedCategory && subcategoryList.length > 0 && (
         <>
           <div>
             <SectionHeader 
@@ -156,7 +154,7 @@ export function AdvancedFilterSidebar({
             />
             {expandedSections.subcategories && (
               <div className="space-y-2 pb-4">
-                {subcategories[selectedCategory].map(sub => (
+                {subcategoryList.map(sub => (
                   <label key={sub.id} className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"

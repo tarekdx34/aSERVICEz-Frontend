@@ -30,6 +30,8 @@ import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
 import { AdminServicesPage } from "./pages/AdminServicesPage";
+import { AdminCategoriesPage } from "./pages/AdminCategoriesPage";
+import { EditServicePage } from "./pages/EditServicePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -254,6 +256,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <AdminServicesPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin-categories",
+    element: (
+      <ProtectedRoute>
+        <AdminCategoriesPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/edit-service/:id",
+    element: (
+      <ProtectedRoute requiredRole="expert">
+        <EditServicePage />
       </ProtectedRoute>
     ),
   },

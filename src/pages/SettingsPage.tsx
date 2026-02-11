@@ -14,6 +14,8 @@ export function SettingsPage() {
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [skills, setSkills] = useState(user?.skills || '');
+  const [specialization, setSpecialization] = useState(user?.specialization || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,7 +27,12 @@ export function SettingsPage() {
     setIsSaving(true);
     setMessage(null);
     try {
-      await authApi.updateProfile({ name, phone, bio });
+      await authApi.updateProfile({
+        name,
+        phone,
+        bio,
+        ...(user?.role === 'expert' ? { skills, specialization } : {}),
+      });
       await refreshProfile();
       setMessage({ type: 'success', text: isRTL ? 'تم حفظ التغييرات بنجاح' : 'Changes saved successfully' });
     } catch (err: any) {
@@ -132,6 +139,35 @@ export function SettingsPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
                 />
               </div>
+              {user?.role === 'expert' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {isRTL ? 'المهارات' : 'Skills'}
+                    </label>
+                    <input
+                      type="text"
+                      value={skills}
+                      onChange={(e) => setSkills(e.target.value)}
+                      placeholder={isRTL ? 'مثال: تصميم، جافاسكريبت، React' : 'e.g. Design, JavaScript, React'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{isRTL ? 'افصل بين المهارات بفواصل' : 'Separate skills with commas'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {isRTL ? 'التخصص' : 'Specialization'}
+                    </label>
+                    <input
+                      type="text"
+                      value={specialization}
+                      onChange={(e) => setSpecialization(e.target.value)}
+                      placeholder={isRTL ? 'مثال: تطوير الواجهات الأمامية' : 'e.g. Frontend Development'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    />
+                  </div>
+                </>
+              )}
               <Button onClick={handleSaveProfile} disabled={isSaving} className="bg-teal-600 hover:bg-teal-700 text-white">
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {isRTL ? 'حفظ التغييرات' : 'Save Changes'}

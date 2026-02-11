@@ -2,7 +2,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { User, Mail, Calendar, Award } from 'lucide-react';
+import { User, Mail, Calendar, Award, Star, Briefcase, Code, FileText } from 'lucide-react';
 
 export function ProfilePage() {
   const { isRTL, toggleLanguage } = useLanguage();
@@ -97,12 +97,60 @@ export function ProfilePage() {
                   {isRTL ? 'نبذة عني' : 'About Me'}
                 </h2>
                 <p className="text-gray-600 leading-relaxed">
-                  {isRTL 
+                  {user?.bio || (isRTL 
                     ? 'مرحباً! أنا عضو في منصة aSERVICEa. يمكنك تحديث معلومات ملفك الشخصي من صفحة الإعدادات.'
                     : 'Welcome! I\'m a member of aSERVICEa platform. You can update your profile information from the settings page.'
-                  }
+                  )}
                 </p>
               </div>
+
+              {/* Expert-specific Fields */}
+              {user?.role === 'expert' && (
+                <div className="pt-6 border-t border-gray-200 space-y-4">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">
+                    {isRTL ? 'معلومات الخبير' : 'Expert Details'}
+                  </h2>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {user.rating != null && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
+                          <Star className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">{isRTL ? 'التقييم' : 'Rating'}</p>
+                          <p className="font-medium text-gray-900">{user.rating} / 5</p>
+                        </div>
+                      </div>
+                    )}
+                    {user.specialization && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                          <Briefcase className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">{isRTL ? 'التخصص' : 'Specialization'}</p>
+                          <p className="font-medium text-gray-900">{user.specialization}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {user.skills && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Code className="w-4 h-4 text-teal-600" />
+                        <p className="text-sm text-gray-500">{isRTL ? 'المهارات' : 'Skills'}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {user.skills.split(',').map((skill, i) => (
+                          <span key={i} className="px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium">
+                            {skill.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

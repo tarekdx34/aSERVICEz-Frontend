@@ -108,7 +108,13 @@ export function MyServicesPage() {
                     </div>
                     <p className="text-lg font-bold text-teal-600 mb-3">${service.price}</p>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDelete(sId)}>
+                      <Link to={`/edit-service/${sId}`} className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Edit className="w-4 h-4 mr-1" />
+                          {isRTL ? 'تعديل' : 'Edit'}
+                        </Button>
+                      </Link>
+                      <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDelete(sId)}>
                         <Trash2 className="w-4 h-4 mr-1" />
                         {isRTL ? 'حذف' : 'Delete'}
                       </Button>

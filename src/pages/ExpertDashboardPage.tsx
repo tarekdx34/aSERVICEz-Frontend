@@ -1,8 +1,11 @@
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Link } from 'react-router';
 import { Button } from '../components/ui/button';
+import { serviceApi } from '../services/api';
 import {
   Package,
   ShoppingBag,
@@ -18,18 +21,29 @@ import {
   Users,
   BarChart3,
   FileText,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 
 export function ExpertDashboardPage() {
   const { isRTL, toggleLanguage } = useLanguage();
+  const { user } = useAuth();
+  const [serviceCount, setServiceCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    serviceApi.getMyServices()
+      .then(res => setServiceCount((res.data || []).length))
+      .catch(() => setServiceCount(0))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const stats = [
     { 
       icon: ShoppingBag, 
       label: 'Active Orders', 
       labelAr: 'الطلبات النشطة',
-      value: '8',
+      value: '—',
       color: 'bg-blue-100 text-blue-600',
       link: '/expert-orders'
     },
@@ -37,7 +51,7 @@ export function ExpertDashboardPage() {
       icon: DollarSign, 
       label: 'Available Balance', 
       labelAr: 'الرصيد المتاح',
-      value: '$2,450',
+      value: '—',
       color: 'bg-green-100 text-green-600',
       link: '/expert-earnings'
     },
@@ -45,7 +59,7 @@ export function ExpertDashboardPage() {
       icon: Star, 
       label: 'Average Rating', 
       labelAr: 'متوسط التقييم',
-      value: '4.9',
+      value: user?.rating != null ? String(user.rating) : '—',
       color: 'bg-yellow-100 text-yellow-600',
       link: '/expert-analytics'
     },
@@ -53,7 +67,7 @@ export function ExpertDashboardPage() {
       icon: TrendingUp, 
       label: 'Total Services', 
       labelAr: 'إجمالي الخدمات',
-      value: '12',
+      value: isLoading ? '...' : String(serviceCount),
       color: 'bg-purple-100 text-purple-600',
       link: '/my-services'
     }

@@ -14,7 +14,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  FolderOpen
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -117,7 +118,7 @@ export function AdminDashboardPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-6">
                 {isRTL ? 'إجراءات سريعة' : 'Quick Actions'}
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <Link to="/admin-users" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition-all text-center">
                   <Users className="w-8 h-8 text-teal-600 mx-auto mb-2" />
                   <p className="text-sm font-medium text-gray-900">{isRTL ? 'إدارة المستخدمين' : 'User Management'}</p>
@@ -138,6 +139,10 @@ export function AdminDashboardPage() {
                 <Link to="/customer-service" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition-all text-center">
                   <Activity className="w-8 h-8 text-orange-600 mx-auto mb-2" />
                   <p className="text-sm font-medium text-gray-900">{isRTL ? 'خدمة العملاء' : 'Customer Service'}</p>
+                </Link>
+                <Link to="/admin-categories" className="p-4 border-2 border-gray-200 rounded-lg hover:border-teal-500 hover:bg-teal-50 transition-all text-center">
+                  <FolderOpen className="w-8 h-8 text-teal-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-900">{isRTL ? 'إدارة الفئات' : 'Categories'}</p>
                 </Link>
               </div>
             </div>

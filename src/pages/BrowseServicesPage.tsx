@@ -48,6 +48,8 @@ export function BrowseServicesPage() {
   const servicesPerPage = 24;
   const selectedCategory = filters.categories.length === 1 ? filters.categories[0] : undefined;
 
+  const selectedSubcategory = filters.subcategories.length === 1 ? filters.subcategories[0] : undefined;
+
   // Fetch category info when a single category is selected
   useEffect(() => {
     if (selectedCategory) {
@@ -69,7 +71,8 @@ export function BrowseServicesPage() {
         page: currentPage,
         limit: servicesPerPage,
         search: filters.searchQuery || undefined,
-        category: selectedCategory || undefined,
+        category: selectedSubcategory ? undefined : (selectedCategory || undefined),
+        subcategory: selectedSubcategory || undefined,
         minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
         maxPrice: filters.priceRange[1] < 500 ? filters.priceRange[1] : undefined,
         sortBy: apiSortBy !== 'relevant' ? apiSortBy : undefined,
@@ -92,7 +95,7 @@ export function BrowseServicesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters.searchQuery, selectedCategory, filters.priceRange, sortBy]);
+  }, [currentPage, filters.searchQuery, selectedCategory, selectedSubcategory, filters.priceRange, sortBy]);
 
   useEffect(() => {
     fetchServices();

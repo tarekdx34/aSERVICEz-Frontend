@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
-import { Upload, X, Lightbulb } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, X, Lightbulb, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { categoryApi, type CategoryResponse, type SubcategoryResponse } from '../../services/api';
 
 interface Step1Data {
   title: string;
@@ -22,29 +23,26 @@ export function Step1BasicInfo({ data, onChange, onNext, isRTL = true }: Step1Ba
   const [tagInput, setTagInput] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [apiCategories, setApiCategories] = useState<CategoryResponse[]>([]);
+  const [subcategoryList, setSubcategoryList] = useState<SubcategoryResponse[]>([]);
+  const [loadingCats, setLoadingCats] = useState(true);
 
-  const categories = [
-    { id: 'design', label: isRTL ? '🎨 تصميم وجرافيك' : '🎨 Design & Graphics' },
-    { id: 'programming', label: isRTL ? '💻 برمجة وتطوير' : '💻 Programming & Development' },
-    { id: 'writing', label: isRTL ? '✍️ كتابة وترجمة' : '✍️ Writing & Translation' },
-    { id: 'marketing', label: isRTL ? '📱 تسويق رقمي' : '📱 Digital Marketing' },
-    { id: 'video', label: isRTL ? '🎬 فيديو وأنيميشن' : '🎬 Video & Animation' },
-    { id: 'business', label: isRTL ? '💼 أعمال' : '💼 Business' },
-  ];
+  useEffect(() => {
+    categoryApi.listWithSubcategories()
+      .then(res => setApiCategories(res.data.categories || []))
+      .catch(() => setApiCategories([]))
+      .finally(() => setLoadingCats(false));
+  }, []);
 
-  const subcategories: Record<string, { id: string; label: string }[]> = {
-    design: [
-      { id: 'logo', label: isRTL ? 'تصميم شعارات' : 'Logo Design' },
-      { id: 'social', label: isRTL ? 'تصميم سوشيال ميديا' : 'Social Media Design' },
-      { id: 'ui', label: isRTL ? 'تصميم واجهات' : 'UI Design' },
-      { id: 'print', label: isRTL ? 'تصميم مطبوعات' : 'Print Design' },
-    ],
-    programming: [
-      { id: 'web', label: isRTL ? 'تطوير مواقع' : 'Web Development' },
-      { id: 'mobile', label: isRTL ? 'تطوير تطبيقات' : 'Mobile Apps' },
-      { id: 'backend', label: isRTL ? 'برمجة خلفية' : 'Backend Development' },
-    ],
-  };
+  // When category changes, load subcategories from the selected category
+  useEffect(() => {
+    if (data.category) {
+      const cat = apiCategories.find(c => String(c.categoryId) === data.category);
+      setSubcategoryList(cat?.subcategories || []);
+    } else {
+      setSubcategoryList([]);
+    }
+  }, [data.category, apiCategories]);
 
   const handleAddTag = () => {
     if (tagInput.trim() && data.tags.length < 5 && !data.tags.includes(tagInput.trim())) {
@@ -145,22 +143,29 @@ export function Step1BasicInfo({ data, onChange, onNext, isRTL = true }: Step1Ba
               {isRTL ? 'الفئة الرئيسية' : 'Main Category'}
               <span className="text-red-500">*</span>
             </label>
-            <select
-              value={data.category}
-              onChange={(e) => onChange({ ...data, category: e.target.value, subcategory: '' })}
-              className="w-full h-12 px-4 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            >
-              <option value="">{isRTL ? 'اختر الفئة' : 'Select Category'}</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+            {loadingCats ? (
+              <div className="flex items-center gap-2 h-12 px-4 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {isRTL ? 'جاري تحميل الفئات...' : 'Loading categories...'}
+              </div>
+            ) : (
+              <select
+                value={data.category}
+                onChange={(e) => onChange({ ...data, category: e.target.value, subcategory: '' })}
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              >
+                <option value="">{isRTL ? 'اختر الفئة' : 'Select Category'}</option>
+                {apiCategories.map(cat => (
+                  <option key={cat.categoryId} value={String(cat.categoryId)}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Subcategory */}
-          {data.category && subcategories[data.category] && (
+          {data.category && subcategoryList.length > 0 && (
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
                 {isRTL ? 'الفئة الفرعية' : 'Subcategory'}
@@ -172,9 +177,9 @@ export function Step1BasicInfo({ data, onChange, onNext, isRTL = true }: Step1Ba
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               >
                 <option value="">{isRTL ? 'اختر الفئة الفرعية' : 'Select Subcategory'}</option>
-                {subcategories[data.category].map(sub => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.label}
+                {subcategoryList.map(sub => (
+                  <option key={sub.subcategoryId} value={String(sub.subcategoryId)}>
+                    {sub.name}
                   </option>
                 ))}
               </select>
