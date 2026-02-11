@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Palette, Code, PenTool, Megaphone, Video, Briefcase, GraduationCap, Camera } from 'lucide-react';
-import { useRef } from 'react';
+import { ChevronLeft, ChevronRight, Palette, Code, PenTool, Megaphone, Video, Briefcase, GraduationCap, Camera, Loader2 } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { categoryApi, type CategoryResponse } from '../services/api';
 
 interface CategoryScrollProps {
   isRTL: boolean;
@@ -7,28 +8,35 @@ interface CategoryScrollProps {
   onCategoryChange: (category: string) => void;
 }
 
+// Fallback icon map for known category slugs
+const iconMap: Record<string, any> = {
+  design: Palette,
+  programming: Code,
+  writing: PenTool,
+  marketing: Megaphone,
+  video: Video,
+  business: Briefcase,
+  training: GraduationCap,
+  photography: Camera,
+};
+
 export function CategoryScroll({ isRTL, activeCategory, onCategoryChange }: CategoryScrollProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [apiCategories, setApiCategories] = useState<CategoryResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const categories = isRTL ? [
-    { icon: Palette, name: 'تصميم وجرافيك', key: 'design' },
-    { icon: Code, name: 'برمجة وتطوير', key: 'programming' },
-    { icon: PenTool, name: 'كتابة وترجمة', key: 'writing' },
-    { icon: Megaphone, name: 'تسويق رقمي', key: 'marketing' },
-    { icon: Video, name: 'فيديو وصوتيات', key: 'video' },
-    { icon: Briefcase, name: 'أعمال', key: 'business' },
-    { icon: GraduationCap, name: 'تدريب واستشارات', key: 'training' },
-    { icon: Camera, name: 'تصوير', key: 'photography' },
-  ] : [
-    { icon: Palette, name: 'Design & Graphics', key: 'design' },
-    { icon: Code, name: 'Programming', key: 'programming' },
-    { icon: PenTool, name: 'Writing & Translation', key: 'writing' },
-    { icon: Megaphone, name: 'Digital Marketing', key: 'marketing' },
-    { icon: Video, name: 'Video & Audio', key: 'video' },
-    { icon: Briefcase, name: 'Business', key: 'business' },
-    { icon: GraduationCap, name: 'Training', key: 'training' },
-    { icon: Camera, name: 'Photography', key: 'photography' },
-  ];
+  useEffect(() => {
+    categoryApi.listWithSubcategories()
+      .then(res => setApiCategories(res.data.categories || []))
+      .catch(() => setApiCategories([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const categories = apiCategories.map(cat => ({
+    icon: iconMap[cat.slug || cat.id] || Briefcase,
+    name: isRTL ? cat.name : (cat.nameEn || cat.name),
+    key: cat.slug || cat.id,
+  }));
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { serviceApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ProgressIndicator } from '../components/add-service/ProgressIndicator';
@@ -158,19 +159,33 @@ export function AddServicePage() {
     alert(isRTL ? 'تم حفظ المسودة بنجاح!' : 'Draft saved successfully!');
   };
 
-  const handlePublish = () => {
-    // Clear draft
-    localStorage.removeItem(STORAGE_KEY);
-    
-    // Show success message
-    alert(
-      isRTL
-        ? 'تم إرسال خدمتك للمراجعة! سيتم إشعارك خلال 24-48 ساعة.'
-        : 'Your service has been submitted for review! You will be notified within 24-48 hours.'
-    );
+  const handlePublish = async () => {
+    try {
+      // Build the create service request
+      const createData = {
+        serviceName: formData.step1.title,
+        description: formData.step2.description,
+        price: formData.step3.packages.basic.price || 0,
+        duration: formData.step3.packages.basic.deliveryDays || 1,
+        categoryId: parseInt(formData.step1.category) || 0,
+        subcategoryId: parseInt(formData.step1.subcategory) || 0,
+      };
 
-    // Navigate to home or dashboard
-    navigate('/');
+      await serviceApi.create(createData, formData.step1.mainImage || undefined);
+
+      // Clear draft
+      localStorage.removeItem(STORAGE_KEY);
+      
+      alert(
+        isRTL
+          ? 'تم إرسال خدمتك للمراجعة! سيتم إشعارك عند الموافقة.'
+          : 'Your service has been submitted for review! You will be notified upon approval.'
+      );
+
+      navigate('/my-services');
+    } catch (err: any) {
+      alert(err.message || (isRTL ? 'حدث خطأ أثناء نشر الخدمة' : 'Failed to publish service'));
+    }
   };
 
   return (

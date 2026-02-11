@@ -1,293 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/browse/Breadcrumb';
-import { ImageGallery } from '../components/service-detail/ImageGallery';
-import { ServiceHeader } from '../components/service-detail/ServiceHeader';
-import { OrderSidebar } from '../components/service-detail/OrderSidebar';
-import { PackageComparison } from '../components/service-detail/PackageComparison';
-import { ExpertProfile } from '../components/service-detail/ExpertProfile';
-import { ReviewsSection } from '../components/service-detail/ReviewsSection';
 import { ServiceCard } from '../components/ServiceCard';
-import { Check } from 'lucide-react';
-
-// Mock service data - In real app, fetch from API using serviceId
-const getServiceData = (id: string) => ({
-  id,
-  title: 'تصميم شعار احترافي لشركتك مع 3 مفاهيم مختلفة',
-  titleEn: 'Professional logo design for your company with 3 different concepts',
-  category: 'تصميم وجرافيك',
-  categoryEn: 'Design & Graphics',
-  subcategory: 'تصميم شعارات',
-  subcategoryEn: 'Logo Design',
-  images: [
-    'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800',
-    'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=800',
-    'https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=800',
-    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800',
-  ],
-  description: `مرحباً بك في خدمة تصميم الشعارات الاحترافية!
-
-أنا مصمم جرافيك محترف مع خبرة تزيد عن 5 سنوات في تصميم الهويات البصرية والشعارات للشركات والمشاريع المختلفة.
-
-ما الذي ستحصل عليه؟
-• تصميم شعار فريد واحترافي يعكس هوية علامتك التجارية
-• 3 مفاهيم تصميمية مختلفة للاختيار من بينها
-• تعديلات غير محدودة حتى تحصل على التصميم المثالي
-• ملفات عالية الجودة بجميع الصيغ (PNG, JPG, AI, PDF, SVG)
-• دليل استخدام الشعار (Brand Guidelines)
-
-لماذا تختارني؟
-✓ خبرة واسعة في مجال التصميم
-✓ تسليم سريع وفي الوقت المحدد
-✓ تواصل مستمر طوال فترة المشروع
-✓ دعم ما بعد التسليم لمدة 30 يوم`,
-  descriptionEn: 'Professional logo design service with 5+ years of experience...',
-  features: [
-    { label: 'تصميم 3 مفاهيم مختلفة', labelEn: '3 different design concepts' },
-    { label: 'مراجعات غير محدودة', labelEn: 'Unlimited revisions' },
-    { label: 'ملفات بجميع الصيغ', labelEn: 'All file formats' },
-    { label: 'دليل استخدام العلامة التجارية', labelEn: 'Brand usage guide' },
-    { label: 'دعم لمدة 30 يوم', labelEn: '30-day support' },
-  ],
-  excludes: [
-    { label: 'طباعة المواد التسويقية', labelEn: 'Printing marketing materials' },
-    { label: 'تطبيقات ثلاثية الأبعاد', labelEn: '3D applications' },
-  ],
-  requirements: [
-    { label: 'اسم الشركة أو المشروع', labelEn: 'Company or project name' },
-    { label: 'الألوان المفضلة (اختياري)', labelEn: 'Preferred colors (optional)' },
-    { label: 'أمثلة للإلهام (اختياري)', labelEn: 'Inspiration examples (optional)' },
-  ],
-  packages: [
-    {
-      id: 'basic',
-      name: 'باقة أساسية',
-      nameEn: 'Basic Package',
-      price: 10,
-      deliveryDays: 3,
-      revisions: 1,
-      features: [],
-    },
-    {
-      id: 'standard',
-      name: 'باقة متقدمة',
-      nameEn: 'Standard Package',
-      price: 25,
-      deliveryDays: 5,
-      revisions: 2,
-      features: [],
-    },
-    {
-      id: 'premium',
-      name: 'باقة احترافية',
-      nameEn: 'Premium Package',
-      price: 50,
-      deliveryDays: 7,
-      revisions: 3,
-      features: [],
-    },
-  ],
-  packageFeatures: [
-    {
-      label: 'عدد التصاميم',
-      labelEn: 'Number of designs',
-      basic: '1',
-      standard: '3',
-      premium: '5',
-    },
-    {
-      label: 'صيغ الملفات',
-      labelEn: 'File formats',
-      basic: 'PNG',
-      standard: 'PNG, AI',
-      premium: 'All formats',
-    },
-    {
-      label: 'ملف المصدر',
-      labelEn: 'Source file',
-      basic: false,
-      standard: true,
-      premium: true,
-    },
-    {
-      label: 'توصيل سريع',
-      labelEn: 'Express delivery',
-      basic: false,
-      standard: false,
-      premium: true,
-    },
-    {
-      label: 'فترة الدعم',
-      labelEn: 'Support period',
-      basic: '15 ' + 'يوم',
-      standard: '30 ' + 'يوم',
-      premium: '60 ' + 'يوم',
-    },
-  ],
-  extras: [
-    {
-      id: 'express',
-      name: 'توصيل سريع (24 ساعة)',
-      nameEn: 'Express delivery (24h)',
-      price: 15,
-      icon: '⚡',
-    },
-    {
-      id: 'source',
-      name: 'ملف المصدر',
-      nameEn: 'Source file',
-      price: 10,
-      icon: '📄',
-    },
-  ],
-  portfolioImages: [
-    'https://images.unsplash.com/photo-1626785774573-4b799315345d?w=400',
-    'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=400',
-    'https://images.unsplash.com/photo-1609921212029-bb5a28e60960?w=400',
-    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400',
-  ],
-  stats: {
-    sales: 145,
-    inQueue: 3,
-    views: 2847,
-    rating: 4.9,
-  },
-  expert: {
-    id: '1',
-    name: 'أحمد محمد',
-    nameEn: 'Ahmed Mohamed',
-    username: 'ahmed_designer',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed',
-    level: 'بائع محترف',
-    levelEn: 'Pro Seller',
-    badge: 'pro',
-    rating: 4.9,
-    reviewCount: 1245,
-    completedOrders: 856,
-    memberSince: '2023',
-    isOnline: true,
-    responseTime: 'خلال ساعة',
-    bio: 'مصمم جرافيك محترف متخصص في تصميم الهويات البصرية والشعارات. أعمل مع الشركات والأفراد لإنشاء تصاميم فريدة تعكس رؤيتهم وقيمهم.',
-    bioEn: 'Professional graphic designer specializing in visual identities and logos...',
-    skills: ['Photoshop', 'Illustrator', 'Logo Design', 'Branding', 'UI/UX'],
-    achievements: [
-      { label: 'أفضل بائع لشهر يناير 2024', labelEn: 'Top seller January 2024' },
-      { label: '100% معدل تسليم في الوقت المحدد', labelEn: '100% on-time delivery rate' },
-      { label: 'أكثر من 850 مشروع مكتمل', labelEn: 'Over 850 completed projects' },
-    ],
-  },
-  reviews: [
-    {
-      id: '1',
-      user: {
-        name: 'سارة أحمد',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sara',
-        country: 'السعودية',
-        countryFlag: '🇸🇦',
-      },
-      rating: 5,
-      comment: 'عمل رائع وسريع! تعاملت مع Ahmed عدة مرات وكان دائماً محترفاً ومبدعاً. الشعار الذي صممه لي تجاوز توقعاتي بكثير. أنصح بالتعامل معه بشدة!',
-      date: '2024-01-28',
-      helpfulCount: 12,
-      sellerReply: {
-        comment: 'شكراً جزيلاً سارة! سعيد جداً بتعاملنا المستمر وثقتك الغالية. دائماً في الخدمة! 🙏',
-        date: '2024-01-28',
-      },
-    },
-    {
-      id: '2',
-      user: {
-        name: 'خالد العتيبي',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Khaled',
-        country: 'الكويت',
-        countryFlag: '🇰🇼',
-      },
-      rating: 5,
-      comment: 'تجربة ممتازة! التصميم احترافي جداً والتواصل سريع. قدم لي عدة خيارات وكان متعاوناً في التعديلات.',
-      date: '2024-01-25',
-      helpfulCount: 8,
-    },
-    {
-      id: '3',
-      user: {
-        name: 'ليلى حسن',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Layla',
-        country: 'الإمارات',
-        countryFlag: '🇦🇪',
-      },
-      rating: 4,
-      comment: 'تصميم جيد وسعر مناسب. كنت أتمنى تسليم أسرع لكن النتيجة النهائية ممتازة.',
-      date: '2024-01-20',
-      helpfulCount: 5,
-    },
-  ],
-  ratingBreakdown: {
-    5: 245,
-    4: 30,
-    3: 8,
-    2: 2,
-    1: 0,
-  },
-});
+import { serviceApi, type ServiceResponse } from '../services/api';
+import { Star, Clock, ShoppingCart, User, Loader2 } from 'lucide-react';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { Button } from '../components/ui/button';
 
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isRTL, toggleLanguage } = useLanguage();
-  const [selectedPackage, setSelectedPackage] = useState('standard');
 
-  // Get service data
-  const service = getServiceData(id || '1');
+  const [service, setService] = useState<ServiceResponse | null>(null);
+  const [relatedServices, setRelatedServices] = useState<ServiceResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Related services (mock data)
-  const relatedServices = [
-    {
-      id: 2,
-      title: isRTL ? 'تصميم بطاقة عمل احترافية' : 'Professional business card design',
-      titleEn: 'Professional business card design',
-      thumbnail: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400',
-      expert: {
-        name: isRTL ? 'محمد علي' : 'Mohamed Ali',
-        nameEn: 'Mohamed Ali',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mohamed',
-        level: isRTL ? 'بائع' : 'Seller',
-        levelEn: 'Seller',
-        badge: 'seller',
-      },
-      rating: 4.8,
-      reviewCount: 156,
-      price: 15,
-      category: 'design',
-      sales: 89,
-      deliveryTime: '3days',
-    },
-    {
-      id: 3,
-      title: isRTL ? 'تصميم هوية بصرية متكاملة' : 'Complete brand identity design',
-      titleEn: 'Complete brand identity design',
-      thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400',
-      expert: {
-        name: isRTL ? 'فاطمة سعيد' : 'Fatima Said',
-        nameEn: 'Fatima Said',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima',
-        level: isRTL ? 'بائع متميز' : 'Featured Seller',
-        levelEn: 'Featured Seller',
-        badge: 'featured',
-      },
-      rating: 4.9,
-      reviewCount: 203,
-      price: 75,
-      category: 'design',
-      sales: 124,
-      deliveryTime: '7days',
-    },
-  ];
+  useEffect(() => {
+    if (!id) return;
+    setIsLoading(true);
+    setError(null);
+
+    serviceApi.getById(id)
+      .then(res => {
+        setService(res.data);
+        // Fetch related services from same category
+        if (res.data.category) {
+          serviceApi.list({ category: String(res.data.category.categoryId), limit: 3 })
+            .then(relRes => {
+              setRelatedServices(
+                (relRes.data.services || []).filter(s => String(s.id) !== String(id)).slice(0, 2)
+              );
+            })
+            .catch(() => setRelatedServices([]));
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch service:', err);
+        setError(err.message || 'Failed to load service');
+      })
+      .finally(() => setIsLoading(false));
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+        <Navbar isRTL={isRTL} onLanguageToggle={toggleLanguage} />
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+        </div>
+        <Footer isRTL={isRTL} />
+      </div>
+    );
+  }
+
+  if (error || !service) {
+    return (
+      <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+        <Navbar isRTL={isRTL} onLanguageToggle={toggleLanguage} />
+        <div className="flex flex-col items-center justify-center py-32">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRTL ? 'الخدمة غير موجودة' : 'Service Not Found'}
+          </h2>
+          <p className="text-gray-600">{error || (isRTL ? 'لم يتم العثور على الخدمة المطلوبة' : 'The requested service could not be found')}</p>
+        </div>
+        <Footer isRTL={isRTL} />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Import Cairo font */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
         
@@ -303,9 +89,9 @@ export function ServiceDetailPage() {
         <Breadcrumb
           items={[
             { label: isRTL ? 'الرئيسية' : 'Home', href: '/' },
-            { label: isRTL ? service.category : service.categoryEn, href: `/browse?category=${service.category}` },
-            { label: isRTL ? service.subcategory : service.subcategoryEn, href: `/browse?category=${service.category}` },
-            { label: isRTL ? service.title.slice(0, 50) + '...' : service.titleEn.slice(0, 50) + '...' },
+            ...(service.category ? [{ label: service.category.name, href: `/browse?category=${service.category.categoryId}` }] : []),
+            ...(service.subcategory ? [{ label: service.subcategory.name }] : []),
+            { label: service.title.length > 50 ? service.title.slice(0, 50) + '...' : service.title },
           ]}
           isRTL={isRTL}
         />
@@ -314,148 +100,146 @@ export function ServiceDetailPage() {
         <div className="grid lg:grid-cols-3 gap-8 mt-6">
           {/* Left Column - Main Content (2/3) */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Image Gallery */}
-            <ImageGallery images={service.images} isRTL={isRTL} />
+            {/* Thumbnail */}
+            {service.thumbnail && (
+              <div className="rounded-xl overflow-hidden bg-gray-100">
+                <ImageWithFallback
+                  src={service.thumbnail}
+                  alt={service.title}
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            )}
 
             {/* Service Header */}
-            <ServiceHeader
-              title={isRTL ? service.title : service.titleEn}
-              category={service.category}
-              categoryEn={service.categoryEn}
-              subcategory={service.subcategory}
-              subcategoryEn={service.subcategoryEn}
-              expert={service.expert}
-              isRTL={isRTL}
-            />
-
-            {/* Description Section */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                📝 {isRTL ? 'وصف الخدمة' : 'Service Description'}
-              </h2>
-              <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
-                {isRTL ? service.description : service.descriptionEn}
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">{service.title}</h1>
+
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                {service.category && (
+                  <span className="bg-gray-100 px-3 py-1 rounded-full">{service.category.name}</span>
+                )}
+                {service.subcategory && (
+                  <span className="bg-gray-100 px-3 py-1 rounded-full">{service.subcategory.name}</span>
+                )}
+                {service.rating != null && (
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium text-gray-900">{service.rating}</span>
+                    <span className="text-gray-500">({service.reviewCount || 0})</span>
+                  </div>
+                )}
+                {service.sales != null && (
+                  <div className="flex items-center gap-1">
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>{service.sales} {isRTL ? 'مبيعات' : 'sales'}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* What's Included */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                ✓ {isRTL ? 'ماذا ستحصل:' : "What's Included:"}
-              </h3>
-              <div className="grid md:grid-cols-2 gap-3">
-                {service.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-teal-600 flex-shrink-0" />
-                    <span className="text-gray-700">{isRTL ? feature.label : feature.labelEn}</span>
-                  </div>
-                ))}
-              </div>
-
-              {service.excludes.length > 0 && (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900 mt-6 mb-4">
-                    ✗ {isRTL ? 'ما لا يشمله:' : 'Not Included:'}
-                  </h3>
-                  <div className="space-y-2">
-                    {service.excludes.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3 text-gray-600">
-                        <span>•</span>
-                        <span>{isRTL ? item.label : item.labelEn}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <h3 className="text-xl font-bold text-gray-900 mt-6 mb-4">
-                📋 {isRTL ? 'متطلبات من المشتري:' : 'Buyer Requirements:'}
-              </h3>
-              <div className="space-y-2">
-                {service.requirements.map((req, index) => (
-                  <div key={index} className="flex items-center gap-3 text-gray-700">
-                    <span>•</span>
-                    <span>{isRTL ? req.label : req.labelEn}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Package Comparison */}
-            <PackageComparison
-              packages={service.packages}
-              features={service.packageFeatures}
-              selectedPackage={selectedPackage}
-              onSelectPackage={setSelectedPackage}
-              isRTL={isRTL}
-            />
-
-            {/* Portfolio Gallery */}
-            {service.portfolioImages.length > 0 && (
+            {/* Description */}
+            {service.description && (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  🖼️ {isRTL ? 'معرض الأعمال السابقة' : 'Portfolio Gallery'}
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  📝 {isRTL ? 'وصف الخدمة' : 'Service Description'}
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {service.portfolioImages.map((image, index) => (
-                    <div key={index} className="aspect-square rounded-lg overflow-hidden group cursor-pointer">
-                      <img
-                        src={image}
-                        alt={`Portfolio ${index + 1}`}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
-                    </div>
-                  ))}
+                <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
+                  {service.description}
                 </div>
               </div>
             )}
 
-            {/* Reviews */}
-            <ReviewsSection
-              reviews={service.reviews}
-              averageRating={service.stats.rating}
-              totalReviews={service.expert.reviewCount}
-              ratingBreakdown={service.ratingBreakdown}
-              isRTL={isRTL}
-            />
-
-            {/* Expert Profile - Mobile */}
-            <div className="lg:hidden">
-              <ExpertProfile expert={service.expert} isRTL={isRTL} />
-            </div>
+            {/* Expert Info (inline) */}
+            {service.expert && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  {isRTL ? 'عن مقدم الخدمة' : 'About the Expert'}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <ImageWithFallback
+                    src={service.expert.avatar || ''}
+                    alt={service.expert.name}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{service.expert.name}</h3>
+                    {service.expert.level && (
+                      <p className="text-sm text-gray-600">{service.expert.level}</p>
+                    )}
+                    {service.expert.rating != null && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">{service.expert.rating}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Sidebar (1/3) */}
           <div className="lg:col-span-1">
-            <OrderSidebar
-              packages={service.packages}
-              extras={service.extras}
-              stats={service.stats}
-              isRTL={isRTL}
-            />
+            <div className="bg-white rounded-xl border border-gray-200 p-6 sticky top-24">
+              {/* Price */}
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-500 mb-1">{isRTL ? 'يبدأ من' : 'Starting at'}</p>
+                <p className="text-3xl font-bold text-gray-900">${service.price}</p>
+              </div>
 
-            {/* Expert Profile - Desktop */}
-            <div className="hidden lg:block mt-4">
-              <ExpertProfile expert={service.expert} isRTL={isRTL} />
+              {/* Delivery Time */}
+              {service.deliveryTime && (
+                <div className="flex items-center justify-center gap-2 text-gray-600 mb-6">
+                  <Clock className="w-5 h-5" />
+                  <span>
+                    {isRTL ? `التسليم خلال ${service.deliveryTime} أيام` : `Delivery in ${service.deliveryTime} days`}
+                  </span>
+                </div>
+              )}
+
+              {/* Order Button */}
+              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 text-lg">
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                {isRTL ? 'اطلب الآن' : 'Order Now'}
+              </Button>
+
+              {/* Stats */}
+              <div className="mt-6 pt-6 border-t border-gray-200 space-y-3 text-sm text-gray-600">
+                {service.sales != null && (
+                  <div className="flex justify-between">
+                    <span>{isRTL ? 'المبيعات' : 'Sales'}</span>
+                    <span className="font-medium text-gray-900">{service.sales}</span>
+                  </div>
+                )}
+                {service.reviewCount != null && (
+                  <div className="flex justify-between">
+                    <span>{isRTL ? 'التقييمات' : 'Reviews'}</span>
+                    <span className="font-medium text-gray-900">{service.reviewCount}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Related Services */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {isRTL ? 'خدمات مشابهة' : 'Related Services'}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedServices.map(relatedService => (
-              <ServiceCard
-                key={relatedService.id}
-                service={relatedService}
-                isRTL={isRTL}
-              />
-            ))}
+        {relatedServices.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              {isRTL ? 'خدمات مشابهة' : 'Related Services'}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {relatedServices.map(relatedService => (
+                <ServiceCard
+                  key={relatedService.id}
+                  service={relatedService}
+                  isRTL={isRTL}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       <Footer isRTL={isRTL} />

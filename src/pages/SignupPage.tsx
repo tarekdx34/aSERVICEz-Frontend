@@ -12,14 +12,14 @@ import {
 } from '../utils/validation';
 import logo from 'figma:asset/5641928ebf37f4553480c47d5388ea1a15d27a75.png';
 
-type AccountType = 'customer' | 'expert';
+type AccountType = 'CUSTOMER' | 'EXPERT';
 
 
 export function SignupPage() {
   const { isRTL } = useLanguage();
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [accountType, setAccountType] = useState<AccountType>('customer');
+  const [accountType, setAccountType] = useState<AccountType>('CUSTOMER');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -84,7 +84,7 @@ export function SignupPage() {
       });
 
       if (result.success) {
-        if (accountType === 'customer') {
+        if (accountType === 'CUSTOMER') {
           navigate('/');
         } else {
           navigate('/expert-setup');
@@ -187,17 +187,17 @@ export function SignupPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setAccountType('customer')}
+                onClick={() => setAccountType('CUSTOMER')}
                 className={`
                   p-4 rounded-lg border-2 transition-all duration-200
-                  ${accountType === 'customer' 
+                  ${accountType === 'CUSTOMER' 
                     ? 'border-teal-600 bg-teal-50 shadow-md' 
                     : 'border-gray-300 bg-white hover:border-gray-400'
                   }
                 `}
               >
                 <ShoppingCart className={`w-8 h-8 mx-auto mb-2 ${
-                  accountType === 'customer' ? 'text-teal-600' : 'text-gray-400'
+                  accountType === 'CUSTOMER' ? 'text-teal-600' : 'text-gray-400'
                 }`} />
                 <div className="text-sm font-semibold text-gray-900">
                   {isRTL ? 'عميل' : 'Customer'}
@@ -209,17 +209,17 @@ export function SignupPage() {
 
               <button
                 type="button"
-                onClick={() => setAccountType('expert')}
+                onClick={() => setAccountType('EXPERT')}
                 className={`
                   p-4 rounded-lg border-2 transition-all duration-200
-                  ${accountType === 'expert' 
+                  ${accountType === 'EXPERT' 
                     ? 'border-teal-600 bg-teal-50 shadow-md' 
                     : 'border-gray-300 bg-white hover:border-gray-400'
                   }
                 `}
               >
                 <Briefcase className={`w-8 h-8 mx-auto mb-2 ${
-                  accountType === 'expert' ? 'text-teal-600' : 'text-gray-400'
+                  accountType === 'EXPERT' ? 'text-teal-600' : 'text-gray-400'
                 }`} />
                 <div className="text-sm font-semibold text-gray-900">
                   {isRTL ? 'خبير' : 'Expert'}
@@ -412,7 +412,7 @@ export function SignupPage() {
       <div className={`
         hidden lg:flex w-[40%] p-12 items-center justify-center animate-fade-in
         transition-all duration-500
-        ${accountType === 'customer' 
+        ${accountType === 'CUSTOMER' 
           ? 'bg-gradient-to-br from-teal-600 to-blue-600' 
           : 'bg-gradient-to-br from-orange-600 to-purple-600'
         }
@@ -420,12 +420,12 @@ export function SignupPage() {
         <div className="text-white space-y-8 max-w-md">
           {/* Icon */}
           <div className="text-7xl mb-6 transform transition-transform duration-500 hover:scale-110">
-            {accountType === 'customer' ? '🛒' : '💼'}
+            {accountType === 'CUSTOMER' ? '🛒' : '💼'}
           </div>
 
           <div>
             <h2 className="text-3xl font-bold mb-4 leading-tight">
-              {accountType === 'customer' 
+              {accountType === 'CUSTOMER' 
                 ? (isRTL ? 'ابدأ في إيجاد الخدمات التي تحتاجها' : 'Start Finding the Services You Need')
                 : (isRTL ? 'ابدأ في عرض خدماتك واكسب المال' : 'Start Offering Your Services and Earn Money')
               }
@@ -433,7 +433,7 @@ export function SignupPage() {
           </div>
 
           <div className="space-y-4">
-            {accountType === 'customer' ? (
+            {accountType === 'CUSTOMER' ? (
               <>
                 {[
                   { icon: '✓', text: isRTL ? 'تصفح آلاف الخدمات' : 'Browse thousands of services' },
@@ -470,7 +470,7 @@ export function SignupPage() {
           <div className={`
             absolute top-20 ${isRTL ? 'left-10' : 'right-10'} w-64 h-64 opacity-10
             morph-bg
-            ${accountType === 'customer' ? 'bg-teal-300' : 'bg-orange-300'}
+            ${accountType === 'CUSTOMER' ? 'bg-teal-300' : 'bg-orange-300'}
           `} />
         </div>
       </div>

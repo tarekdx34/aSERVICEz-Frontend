@@ -3,20 +3,20 @@ import { ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface Service {
-  id: number;
+  id: string | number;
   title: string;
-  thumbnail: string;
-  expert: {
+  thumbnail?: string;
+  expert?: {
     name: string;
-    avatar: string;
-    level: string;
-    badge: string;
+    avatar?: string;
+    level?: string;
+    badge?: string;
   };
-  rating: number;
-  reviewCount: number;
+  rating?: number;
+  reviewCount?: number;
   price: number;
-  deliveryTime: string;
-  category: string;
+  deliveryTime?: number;
+  category?: any;
 }
 
 interface ServiceGridProps {

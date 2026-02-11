@@ -37,12 +37,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function normalizeRole(userType: string): UserRole {
+  const map: Record<string, UserRole> = {
+    CUSTOMER: 'customer',
+    EXPERT: 'expert',
+    ADMIN: 'admin',
+    CUSTOMER_SERVICE: 'customer_service',
+    customer: 'customer',
+    expert: 'expert',
+    admin: 'admin',
+    customer_service: 'customer_service',
+  };
+  return map[userType] || 'customer';
+}
+
 function mapProfileToUser(profile: UserProfile): User {
   return {
     id: String(profile.userId),
     name: profile.name,
     email: profile.email,
-    role: profile.userType,
+    role: normalizeRole(profile.userType),
     phone: profile.phone,
     avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.email}`,
     loyaltyPoints: profile.loyaltyPoints,
@@ -77,7 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('user', JSON.stringify(userData));
         })
         .catch(() => {
-          // Token expired or invalid
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         })
@@ -98,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authApi.login({ email, password });
 
       // Extract token from response data
-      const token = (res.data as any)?.token || (res as any).token;
+      const token = res.data?.token;
       if (token) {
         localStorage.setItem('token', token);
       }
@@ -122,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authApi.register(data);
 
       // Extract token from response data
-      const token = (res.data as any)?.token || (res as any).token;
+      const token = res.data?.token;
       if (token) {
         localStorage.setItem('token', token);
 
@@ -157,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = mapProfileToUser(profileRes.data);
       setUser(userData);
     } catch {
-      // If profile fetch fails, log out
       logout();
     }
   };

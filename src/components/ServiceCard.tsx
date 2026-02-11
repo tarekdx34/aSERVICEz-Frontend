@@ -5,19 +5,19 @@ import { Link } from 'react-router';
 
 interface ServiceCardProps {
   service: {
-    id: number;
+    id: string | number;
     title: string;
-    thumbnail: string;
-    expert: {
+    thumbnail?: string;
+    expert?: {
       name: string;
-      avatar: string;
-      level: string;
-      badge: string;
+      avatar?: string;
+      level?: string;
+      badge?: string;
     };
-    rating: number;
-    reviewCount: number;
+    rating?: number;
+    reviewCount?: number;
     price: number;
-    deliveryTime?: '24h' | '3days' | '7days' | '14days';
+    deliveryTime?: number;
   };
   isRTL: boolean;
   viewMode?: 'grid' | 'list';
@@ -52,6 +52,18 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
     '7days': { ar: '7 أيام', en: '7 days' },
     '14days': { ar: '14 يوم', en: '14 days' },
   };
+
+  const getDeliveryLabel = () => {
+    if (!service.deliveryTime) return null;
+    if (typeof service.deliveryTime === 'number') {
+      if (service.deliveryTime <= 1) return isRTL ? 'خلال 24 ساعة' : 'Within 24h';
+      return isRTL ? `${service.deliveryTime} أيام` : `${service.deliveryTime} days`;
+    }
+    const entry = deliveryTimeText[service.deliveryTime];
+    return entry ? (isRTL ? entry.ar : entry.en) : null;
+  };
+
+  const deliveryLabel = getDeliveryLabel();
 
   // List view layout
   if (viewMode === 'list') {
@@ -93,9 +105,10 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
               </h3>
 
               {/* Expert Info */}
+              {service.expert && (
               <div className="flex items-center gap-2 mb-3">
                 <ImageWithFallback
-                  src={service.expert.avatar}
+                  src={service.expert.avatar || ''}
                   alt={service.expert.name}
                   className="w-8 h-8 rounded-full object-cover"
                 />
@@ -103,25 +116,28 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
                 {service.expert.badge && (
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${
-                      levelColors[service.expert.badge as keyof typeof levelColors]
+                      levelColors[service.expert.badge as keyof typeof levelColors] || 'bg-gray-100 text-gray-700'
                     }`}
                   >
-                    {levelText[service.expert.badge as keyof typeof levelText]}
+                    {levelText[service.expert.badge as keyof typeof levelText] || service.expert.badge}
                   </span>
                 )}
               </div>
+              )}
 
               {/* Rating & Delivery */}
               <div className="flex items-center gap-4 text-sm">
+                {service.rating != null && (
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-medium text-gray-900">{service.rating}</span>
-                  <span className="text-gray-500">({service.reviewCount})</span>
+                  <span className="text-gray-500">({service.reviewCount || 0})</span>
                 </div>
-                {service.deliveryTime && deliveryTimeText[service.deliveryTime] && (
+                )}
+                {deliveryLabel && (
                   <div className="flex items-center gap-1 text-gray-600">
                     <Clock className="w-4 h-4" />
-                    <span>{isRTL ? deliveryTimeText[service.deliveryTime].ar : deliveryTimeText[service.deliveryTime].en}</span>
+                    <span>{deliveryLabel}</span>
                   </div>
                 )}
               </div>
@@ -178,9 +194,10 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
           </h3>
 
           {/* Expert Info */}
+          {service.expert && (
           <div className="flex items-center gap-2 mb-3">
             <ImageWithFallback
-              src={service.expert.avatar}
+              src={service.expert.avatar || ''}
               alt={service.expert.name}
               className="w-8 h-8 rounded-full object-cover"
             />
@@ -190,21 +207,24 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
             {service.expert.badge && (
               <span
                 className={`text-xs px-2 py-1 rounded-full ${
-                  levelColors[service.expert.badge as keyof typeof levelColors]
+                  levelColors[service.expert.badge as keyof typeof levelColors] || 'bg-gray-100 text-gray-700'
                 }`}
               >
-                {levelText[service.expert.badge as keyof typeof levelText]}
+                {levelText[service.expert.badge as keyof typeof levelText] || service.expert.badge}
               </span>
             )}
           </div>
+          )}
 
           {/* Rating & Price */}
           <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            {service.rating != null && (
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="font-medium text-gray-900">{service.rating}</span>
-              <span className="text-sm text-gray-500">({service.reviewCount})</span>
+              <span className="text-sm text-gray-500">({service.reviewCount || 0})</span>
             </div>
+            )}
             
             <div className="text-right" dir={isRTL ? 'rtl' : 'ltr'}>
               <p className="text-xs text-gray-500">
@@ -215,12 +235,12 @@ export function ServiceCard({ service, isRTL, viewMode = 'grid' }: ServiceCardPr
           </div>
 
           {/* Delivery Time */}
-          {service.deliveryTime && deliveryTimeText[service.deliveryTime] && (
+          {deliveryLabel && (
             <div className="flex items-center gap-1.5 mt-2 text-sm text-gray-600">
               <Package className="w-4 h-4" />
               <span>
                 {isRTL ? 'تسليم خلال ' : 'Delivery within '}
-                {isRTL ? deliveryTimeText[service.deliveryTime].ar : deliveryTimeText[service.deliveryTime].en}
+                {deliveryLabel}
               </span>
             </div>
           )}

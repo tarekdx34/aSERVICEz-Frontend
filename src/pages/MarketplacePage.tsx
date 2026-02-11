@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Navbar } from '../components/Navbar';
 import { SearchHero } from '../components/SearchHero';
@@ -7,7 +7,7 @@ import { FilterSidebar } from '../components/FilterSidebar';
 import { ServiceGrid } from '../components/ServiceGrid';
 import { Pagination } from '../components/Pagination';
 import { Footer } from '../components/Footer';
-import { mockServices } from '../data/mockServices';
+import { serviceApi, type ServiceResponse, type PaginationResponse } from '../services/api';
 import { Filter } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -26,91 +26,68 @@ export function MarketplacePage() {
     sellerLevel: [] as string[],
   });
 
+  const [services, setServices] = useState<ServiceResponse[]>([]);
+  const [pagination, setPagination] = useState<PaginationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const servicesPerPage = 12;
+
+  const fetchServices = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await serviceApi.list({
+        page: currentPage,
+        limit: servicesPerPage,
+        search: searchQuery || undefined,
+        category: activeCategory !== 'all' ? activeCategory : undefined,
+        minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
+        maxPrice: filters.priceRange[1] < 500 ? filters.priceRange[1] : undefined,
+        sortBy: sortBy !== 'relevant' ? sortBy : undefined,
+      });
+      setServices(res.data.services || []);
+      setPagination(res.data.pagination || null);
+    } catch (err) {
+      console.error('Failed to fetch services:', err);
+      setServices([]);
+      setPagination(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, searchQuery, activeCategory, filters.priceRange, sortBy]);
+
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
   // Scroll to top on page change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // Filter and sort services
-  const filteredServices = useMemo(() => {
-    let result = mockServices.map(service => ({
-      ...service,
-      title: isRTL ? service.title : service.titleEn,
-      expert: {
-        ...service.expert,
-        name: isRTL ? service.expert.name : service.expert.nameEn,
-        level: isRTL ? service.expert.level : service.expert.levelEn,
-      },
-    }));
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(service => 
-        service.title.toLowerCase().includes(query) ||
-        service.expert.name.toLowerCase().includes(query)
-      );
+  // Apply client-side filters for fields the API doesn't support
+  const filteredServices = services.filter(service => {
+    if (filters.deliveryTime.length > 0 && service.deliveryTime) {
+      const days = service.deliveryTime;
+      const matches = filters.deliveryTime.some(dt => {
+        if (dt === '2days') return days <= 2;
+        if (dt === '3days') return days <= 3;
+        if (dt === '7days') return days <= 7;
+        if (dt === '7plus') return days > 7;
+        return false;
+      });
+      if (!matches) return false;
     }
-
-    // Apply category filter
-    if (activeCategory !== 'all') {
-      result = result.filter(service => service.category === activeCategory);
+    if (filters.rating > 0 && (service.rating == null || service.rating < filters.rating)) {
+      return false;
     }
-
-    // Apply price filter
-    result = result.filter(service => 
-      service.price >= filters.priceRange[0] && 
-      service.price <= filters.priceRange[1]
-    );
-
-    // Apply delivery time filter
-    if (filters.deliveryTime.length > 0) {
-      result = result.filter(service => 
-        filters.deliveryTime.includes(service.deliveryTime)
-      );
+    if (filters.sellerLevel.length > 0 && service.expert?.badge) {
+      if (!filters.sellerLevel.includes(service.expert.badge)) return false;
     }
+    return true;
+  });
 
-    // Apply rating filter
-    if (filters.rating > 0) {
-      result = result.filter(service => service.rating >= filters.rating);
-    }
-
-    // Apply seller level filter
-    if (filters.sellerLevel.length > 0) {
-      result = result.filter(service => 
-        filters.sellerLevel.includes(service.expert.badge)
-      );
-    }
-
-    // Apply sorting
-    switch (sortBy) {
-      case 'newest':
-        result = [...result].reverse();
-        break;
-      case 'rating':
-        result = [...result].sort((a, b) => b.rating - a.rating);
-        break;
-      case 'price-low':
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      default:
-        // relevant - keep original order
-        break;
-    }
-
-    return result;
-  }, [searchQuery, activeCategory, filters, sortBy, isRTL]);
-
-  // Pagination
-  const servicesPerPage = 12;
-  const totalPages = Math.ceil(filteredServices.length / servicesPerPage);
-  const paginatedServices = useMemo(() => {
-    const startIndex = (currentPage - 1) * servicesPerPage;
-    return filteredServices.slice(startIndex, startIndex + servicesPerPage);
-  }, [filteredServices, currentPage]);
+  const totalResults = filteredServices.length;
+  const totalPages = pagination?.totalPages || Math.ceil(totalResults / servicesPerPage);
 
   const handleClearFilters = () => {
     setFilters({
@@ -147,7 +124,6 @@ export function MarketplacePage() {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Import Cairo font for Arabic */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
         
@@ -216,7 +192,7 @@ export function MarketplacePage() {
               className="w-full bg-teal-600 hover:bg-teal-700 text-white gap-2"
             >
               <Filter className="w-4 h-4" />
-              {isRTL ? 'تصفية ��لنتائج' : 'Filter Results'}
+              {isRTL ? 'تصفية النتائج' : 'Filter Results'}
             </Button>
           </div>
 
@@ -234,9 +210,9 @@ export function MarketplacePage() {
 
           {/* Main Content */}
           <ServiceGrid 
-            services={paginatedServices}
+            services={filteredServices}
             isRTL={isRTL}
-            totalResults={filteredServices.length}
+            totalResults={pagination?.totalItems || totalResults}
             currentPage={currentPage}
             sortBy={sortBy}
             onSortChange={handleSortChange}

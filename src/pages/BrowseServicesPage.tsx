@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSearchParams } from 'react-router';
 import { Navbar } from '../components/Navbar';
@@ -10,7 +10,7 @@ import { ActiveFilters } from '../components/browse/ActiveFilters';
 import { EmptyState } from '../components/browse/EmptyState';
 import { ServiceCard } from '../components/ServiceCard';
 import { Pagination } from '../components/Pagination';
-import { mockServices } from '../data/mockServices';
+import { serviceApi, categoryApi, type ServiceResponse, type PaginationResponse, type CategoryResponse } from '../services/api';
 import { Grid3x3, List, Filter, ChevronDown } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -40,26 +40,63 @@ export function BrowseServicesPage() {
     additionalOptions: [],
   });
 
-  // Get selected category for subcategories
+  const [services, setServices] = useState<ServiceResponse[]>([]);
+  const [pagination, setPagination] = useState<PaginationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [categoryData, setCategoryData] = useState<CategoryResponse | null>(null);
+
+  const servicesPerPage = 24;
   const selectedCategory = filters.categories.length === 1 ? filters.categories[0] : undefined;
 
-  // Category data
-  const categoryData = selectedCategory ? {
-    design: {
-      name: 'تصميم وجرافيك',
-      nameEn: 'Design & Graphics',
-      description: 'احصل على أفضل خدمات التصميم والجرافيك من خبراء محترفين',
-      descriptionEn: 'Get the best design and graphics services from professional experts',
-      icon: '🎨',
-    },
-    programming: {
-      name: 'برمجة وتطوير',
-      nameEn: 'Programming & Development',
-      description: 'خدمات برمجة وتطوير احترافية لجميع احتياجاتك التقنية',
-      descriptionEn: 'Professional programming and development services for all your technical needs',
-      icon: '💻',
-    },
-  }[selectedCategory] : null;
+  // Fetch category info when a single category is selected
+  useEffect(() => {
+    if (selectedCategory) {
+      categoryApi.getByIdentifier(selectedCategory)
+        .then(res => setCategoryData(res.data))
+        .catch(() => setCategoryData(null));
+    } else {
+      setCategoryData(null);
+    }
+  }, [selectedCategory]);
+
+  const fetchServices = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Map sort values to API-supported ones
+      const apiSortBy = (sortBy === 'rating' || sortBy === 'bestseller') ? undefined : sortBy;
+
+      const res = await serviceApi.list({
+        page: currentPage,
+        limit: servicesPerPage,
+        search: filters.searchQuery || undefined,
+        category: selectedCategory || undefined,
+        minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
+        maxPrice: filters.priceRange[1] < 500 ? filters.priceRange[1] : undefined,
+        sortBy: apiSortBy !== 'relevant' ? apiSortBy : undefined,
+      });
+      let fetchedServices = res.data.services || [];
+
+      // Client-side sorting for unsupported sort options
+      if (sortBy === 'rating') {
+        fetchedServices = [...fetchedServices].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      } else if (sortBy === 'bestseller') {
+        fetchedServices = [...fetchedServices].sort((a, b) => (b.sales || 0) - (a.sales || 0));
+      }
+
+      setServices(fetchedServices);
+      setPagination(res.data.pagination || null);
+    } catch (err) {
+      console.error('Failed to fetch services:', err);
+      setServices([]);
+      setPagination(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, filters.searchQuery, selectedCategory, filters.priceRange, sortBy]);
+
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
 
   // Scroll to top on page change
   useEffect(() => {
@@ -75,104 +112,44 @@ export function BrowseServicesPage() {
     setSearchParams(params);
   }, [filters.searchQuery, filters.categories, sortBy, setSearchParams]);
 
-  // Filter and sort services
-  const filteredServices = useMemo(() => {
-    let result = mockServices.map(service => ({
-      ...service,
-      title: isRTL ? service.title : service.titleEn,
-      expert: {
-        ...service.expert,
-        name: isRTL ? service.expert.name : service.expert.nameEn,
-        level: isRTL ? service.expert.level : service.expert.levelEn,
-      },
-    }));
-
-    // Apply search query
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      result = result.filter(service =>
-        service.title.toLowerCase().includes(query) ||
-        service.expert.name.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply category filter
-    if (filters.categories.length > 0) {
-      result = result.filter(service =>
-        filters.categories.includes(service.category)
-      );
-    }
-
-    // Apply price filter
-    result = result.filter(service =>
-      service.price >= filters.priceRange[0] &&
-      service.price <= filters.priceRange[1]
-    );
-
-    // Apply price presets
+  // Apply client-side filters the API doesn't support
+  const filteredServices = services.filter(service => {
+    // Price presets
     if (filters.pricePresets.length > 0) {
-      result = result.filter(service => {
-        return filters.pricePresets.some(preset => {
-          if (preset === '5') return service.price <= 5;
-          if (preset === '10-25') return service.price >= 10 && service.price <= 25;
-          if (preset === '25-50') return service.price >= 25 && service.price <= 50;
-          if (preset === '50+') return service.price >= 50;
-          return false;
-        });
+      const match = filters.pricePresets.some(preset => {
+        if (preset === '5') return service.price <= 5;
+        if (preset === '10-25') return service.price >= 10 && service.price <= 25;
+        if (preset === '25-50') return service.price >= 25 && service.price <= 50;
+        if (preset === '50+') return service.price >= 50;
+        return false;
       });
+      if (!match) return false;
     }
-
-    // Apply delivery time filter
-    if (filters.deliveryTime.length > 0) {
-      result = result.filter(service =>
-        filters.deliveryTime.includes(service.deliveryTime)
-      );
+    // Delivery time
+    if (filters.deliveryTime.length > 0 && service.deliveryTime) {
+      const days = service.deliveryTime;
+      const match = filters.deliveryTime.some(dt => {
+        if (dt === '24h') return days <= 1;
+        if (dt === '3days') return days <= 3;
+        if (dt === '7days') return days <= 7;
+        if (dt === '14days') return days <= 14;
+        if (dt === '14+') return days > 14;
+        return false;
+      });
+      if (!match) return false;
     }
-
-    // Apply rating filter
-    if (filters.rating > 0) {
-      result = result.filter(service => service.rating >= filters.rating);
+    // Rating
+    if (filters.rating > 0 && (service.rating == null || service.rating < filters.rating)) {
+      return false;
     }
-
-    // Apply seller level filter
-    if (filters.sellerLevel.length > 0) {
-      result = result.filter(service =>
-        filters.sellerLevel.includes(service.expert.badge)
-      );
+    // Seller level
+    if (filters.sellerLevel.length > 0 && service.expert?.badge) {
+      if (!filters.sellerLevel.includes(service.expert.badge)) return false;
     }
+    return true;
+  });
 
-    // Apply sorting
-    switch (sortBy) {
-      case 'newest':
-        result = [...result].reverse();
-        break;
-      case 'rating':
-        result = [...result].sort((a, b) => b.rating - a.rating);
-        break;
-      case 'price-low':
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      case 'bestseller':
-        result = [...result].sort((a, b) => b.sales - a.sales);
-        break;
-      default:
-        // relevant - keep original order
-        break;
-    }
-
-    return result;
-  }, [filters, sortBy, isRTL]);
-
-  // Pagination
-  const servicesPerPage = 24;
-  const totalPages = Math.ceil(filteredServices.length / servicesPerPage);
-  const paginatedServices = useMemo(() => {
-    const startIndex = (currentPage - 1) * servicesPerPage;
-    return filteredServices.slice(startIndex, startIndex + servicesPerPage);
-  }, [filteredServices, currentPage]);
+  const totalPages = pagination?.totalPages || Math.ceil(filteredServices.length / servicesPerPage);
 
   const handleClearFilters = () => {
     setFilters({
@@ -228,7 +205,6 @@ export function BrowseServicesPage() {
 
   return (
     <div className={`min-h-screen bg-gray-50 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Import Cairo font */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
         
@@ -245,7 +221,7 @@ export function BrowseServicesPage() {
           items={[
             { label: isRTL ? 'الرئيسية' : 'Home', href: '/' },
             { label: isRTL ? 'تصفح الخدمات' : 'Browse Services', href: '/browse' },
-            ...(categoryData ? [{ label: isRTL ? categoryData.name : categoryData.nameEn }] : []),
+            ...(categoryData ? [{ label: isRTL ? categoryData.name : (categoryData.nameEn || categoryData.name) }] : []),
           ]}
           isRTL={isRTL}
         />
@@ -254,11 +230,11 @@ export function BrowseServicesPage() {
         {categoryData && (
           <CategoryHero
             categoryName={categoryData.name}
-            categoryNameEn={categoryData.nameEn}
-            description={categoryData.description}
-            descriptionEn={categoryData.descriptionEn}
-            icon={categoryData.icon}
-            serviceCount={filteredServices.length}
+            categoryNameEn={categoryData.nameEn || categoryData.name}
+            description={categoryData.description || ''}
+            descriptionEn={categoryData.descriptionEn || categoryData.description || ''}
+            icon={categoryData.icon || '📁'}
+            serviceCount={pagination?.totalItems || filteredServices.length}
             isRTL={isRTL}
           />
         )}
@@ -320,8 +296,8 @@ export function BrowseServicesPage() {
                 {/* Results Count */}
                 <div className="text-sm text-gray-600">
                   {isRTL
-                    ? `عرض ${((currentPage - 1) * servicesPerPage + 1).toLocaleString('ar-SA')}-${Math.min(currentPage * servicesPerPage, filteredServices.length).toLocaleString('ar-SA')} من ${filteredServices.length.toLocaleString('ar-SA')} خدمة`
-                    : `Showing ${((currentPage - 1) * servicesPerPage + 1).toLocaleString('en-US')}-${Math.min(currentPage * servicesPerPage, filteredServices.length).toLocaleString('en-US')} of ${filteredServices.length.toLocaleString('en-US')} services`
+                    ? `${pagination?.totalItems || filteredServices.length} خدمة`
+                    : `${pagination?.totalItems || filteredServices.length} services`
                   }
                 </div>
 
@@ -401,7 +377,7 @@ export function BrowseServicesPage() {
                     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
                     : 'space-y-4'
                 }>
-                  {paginatedServices.map(service => (
+                  {filteredServices.map(service => (
                     <ServiceCard
                       key={service.id}
                       service={service}
