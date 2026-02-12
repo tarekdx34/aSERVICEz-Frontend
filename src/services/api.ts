@@ -358,7 +358,7 @@ export const serviceApi = {
       headers: getAuthHeaders(),
     });
     const res = await handleResponse<ApiResponse<any>>(response);
-    const raw = Array.isArray(res.data) ? res.data : [];
+    const raw = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.services) ? res.data.services : [];
     return { ...res, data: raw.map(normalizeService) };
   },
 
@@ -456,7 +456,7 @@ export const adminApi = {
       headers: getAuthHeaders(),
     });
     const res = await handleResponse<ApiResponse<any>>(response);
-    const raw = Array.isArray(res.data) ? res.data : [];
+    const raw = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.services) ? res.data.services : [];
     return { ...res, data: raw.map(normalizeService) };
   },
 
@@ -466,7 +466,7 @@ export const adminApi = {
       headers: getAuthHeaders(),
     });
     const res = await handleResponse<ApiResponse<any>>(response);
-    const raw = Array.isArray(res.data) ? res.data : [];
+    const raw = Array.isArray(res.data) ? res.data : Array.isArray(res.data?.services) ? res.data.services : [];
     return { ...res, data: raw.map(normalizeService) };
   },
 

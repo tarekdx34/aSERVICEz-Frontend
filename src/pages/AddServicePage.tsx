@@ -39,6 +39,8 @@ export function AddServicePage() {
   useEffect(() => {
     if (categoryId) {
       const cat = categories.find(c => String(c.categoryId) === categoryId);
+      console.log('Selected category:', cat);
+      console.log('Subcategories:', cat?.subcategories);
       setSubcategories(cat?.subcategories || []);
     } else {
       setSubcategories([]);

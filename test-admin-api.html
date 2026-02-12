@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin API Test</title>
+  <style>
+    body { font-family: system-ui; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    h1 { color: #0d9488; }
+    .section { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    button { background: #0d9488; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px; }
+    button:hover { background: #0f766e; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    pre { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 6px; overflow-x: auto; }
+    .result { margin-top: 10px; }
+    input { padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 300px; }
+    label { display: block; margin: 10px 0 5px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Admin API Tester</h1>
+  
+  <div class="section">
+    <h2>1. Login as Admin</h2>
+    <label>Email:</label>
+    <input id="email" type="email" value="admin@example.com" />
+    <label>Password:</label>
+    <input id="password" type="password" value="admin123" />
+    <br><br>
+    <button onclick="testLogin()">Login</button>
+    <div class="result" id="loginResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>2. Get Pending Services</h2>
+    <button onclick="testPendingServices()">GET /api/admin/services/pending</button>
+    <div class="result" id="pendingResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>3. Get All Services (Admin)</h2>
+    <button onclick="testAllServices()">GET /api/admin/services</button>
+    <div class="result" id="allServicesResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>4. Approve Service</h2>
+    <label>Service ID:</label>
+    <input id="serviceId" type="number" value="70" />
+    <br><br>
+    <button onclick="approveService('ACTIVE')">Approve (ACTIVE)</button>
+    <button onclick="approveService('APPROVED')">Approve (APPROVED)</button>
+    <button class="danger" onclick="approveService('INACTIVE')">Reject (INACTIVE)</button>
+    <div class="result" id="approveResult"></div>
+  </div>
+
+  <div class="section">
+    <h2>5. Database Check</h2>
+    <p>Services in database with 'pending' status:</p>
+    <pre>serviceId: 70 - "Web Design" - status: "pending"
+serviceId: 27 - "iOS App Development" - status: "pending"  
+serviceId: 28 - "Flutter App Development" - status: "pending"</pre>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('token');
+
+    async function testLogin() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        document.getElementById('loginResult').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        
+        if (data.data?.token) {
+          token = data.data.token;
+          localStorage.setItem('token', token);
+          alert('✅ Login successful! Token saved.');
+        }
+      } catch (error) {
+        document.getElementById('loginResult').innerHTML = `<pre style="color: #ef4444">${error.message}</pre>`;
+      }
+    }
+
+    async function testPendingServices() {
+      if (!token) {
+        alert('❌ Please login first');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/services/pending', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        const resultDiv = document.getElementById('pendingResult');
+        
+        if (response.ok) {
+          const count = Array.isArray(data.data) ? data.data.length : 0;
+          resultDiv.innerHTML = `
+            <p><strong>Status: ${response.status}</strong></p>
+            <p><strong>Count: ${count} services</strong></p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<pre style="color: #ef4444">Status: ${response.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        document.getElementById('pendingResult').innerHTML = `<pre style="color: #ef4444">${error.message}</pre>`;
+      }
+    }
+
+    async function testAllServices() {
+      if (!token) {
+        alert('❌ Please login first');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/services', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        const resultDiv = document.getElementById('allServicesResult');
+        
+        if (response.ok) {
+          const services = Array.isArray(data.data) ? data.data : [];
+          const pending = services.filter(s => s.status?.toLowerCase() === 'pending');
+          
+          resultDiv.innerHTML = `
+            <p><strong>Status: ${response.status}</strong></p>
+            <p><strong>Total Services: ${services.length}</strong></p>
+            <p><strong>Pending Services: ${pending.length}</strong></p>
+            <details>
+              <summary>Show all services</summary>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </details>
+          `;
+        } else {
+          resultDiv.innerHTML = `<pre style="color: #ef4444">Status: ${response.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        document.getElementById('allServicesResult').innerHTML = `<pre style="color: #ef4444">${error.message}</pre>`;
+      }
+    }
+
+    async function approveService(status) {
+      if (!token) {
+        alert('❌ Please login first');
+        return;
+      }
+
+      const serviceId = document.getElementById('serviceId').value;
+      
+      try {
+        const response = await fetch(`/api/admin/services/${serviceId}/approve`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status })
+        });
+        
+        const data = await response.json();
+        const resultDiv = document.getElementById('approveResult');
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p style="color: #10b981"><strong>✅ Success!</strong></p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+          // Refresh pending services
+          setTimeout(testPendingServices, 500);
+        } else {
+          resultDiv.innerHTML = `<pre style="color: #ef4444">Status: ${response.status}\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        document.getElementById('approveResult').innerHTML = `<pre style="color: #ef4444">${error.message}</pre>`;
+      }
+    }
+
+    // Load token on page load
+    if (token) {
+      console.log('Token found in localStorage');
+    }
+  </script>
+</body>
+</html>

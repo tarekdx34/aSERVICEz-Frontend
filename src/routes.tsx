@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { MarketplacePage } from "./pages/MarketplacePage";
@@ -81,11 +81,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/settings",
-    element: (
-      <ProtectedRoute>
-        <SettingsPage />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/profile" replace />,
   },
   {
     path: "/add-service",

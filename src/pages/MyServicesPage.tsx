@@ -89,9 +89,14 @@ export function MyServicesPage() {
             {services.map(service => {
               const sId = service.serviceId ?? Number(service.id);
               const statusColors: Record<string, string> = {
+                active: 'bg-green-100 text-green-700',
                 ACTIVE: 'bg-green-100 text-green-700',
+                approved: 'bg-green-100 text-green-700',
                 APPROVED: 'bg-green-100 text-green-700',
+                pending: 'bg-yellow-100 text-yellow-700',
                 PENDING: 'bg-yellow-100 text-yellow-700',
+                pending_approval: 'bg-yellow-100 text-yellow-700',
+                inactive: 'bg-red-100 text-red-700',
                 INACTIVE: 'bg-red-100 text-red-700',
               };
               return (

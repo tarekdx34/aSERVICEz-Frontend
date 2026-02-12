@@ -35,7 +35,7 @@ export function AdminServicesPage() {
     fetchPendingServices();
   }, []);
 
-  const selectedService = services.find(s => (s.serviceId ?? s.id) === selectedServiceId);
+  const selectedService = services.find(s => Number(s.serviceId ?? s.id) === selectedServiceId);
 
   const handleApprove = async (serviceId: number) => {
     setActionLoading(true);
@@ -127,7 +127,7 @@ export function AdminServicesPage() {
               ) : (
               <div className="space-y-3">
                 {services.map((s) => {
-                  const sId = s.serviceId ?? Number(s.id);
+                  const sId = Number(s.serviceId ?? s.id);
                   return (
                   <div
                     key={sId}
