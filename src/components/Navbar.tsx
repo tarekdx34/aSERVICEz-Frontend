@@ -3,7 +3,8 @@ import { Button } from "./ui/button";
 import { Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 import logo from "figma:asset/5641928ebf37f4553480c47d5388ea1a15d27a75.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { notificationApi } from "../services/api";
 
 interface NavbarProps {
   isRTL: boolean;
@@ -16,6 +17,16 @@ export function Navbar({
 }: NavbarProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Fetch unread notification count when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      notificationApi.getAll({ filter: 'unread', limit: 1 })
+        .then(res => setUnreadNotifications(res.data.unreadCount))
+        .catch(() => setUnreadNotifications(0));
+    }
+  }, [isAuthenticated]);
   
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -54,10 +65,20 @@ export function Navbar({
               <Search className="w-5 h-5" />
             </button>
 
-            <button className="p-2 text-gray-600 hover:text-teal-600 transition-colors relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            {isAuthenticated ? (
+              <Link to="/notifications" className="p-2 text-gray-600 hover:text-teal-600 transition-colors relative">
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-medium">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <Link to="/login" className="p-2 text-gray-600 hover:text-teal-600 transition-colors relative">
+                <Bell className="w-5 h-5" />
+              </Link>
+            )}
 
             <button
               onClick={onLanguageToggle}
@@ -76,6 +97,14 @@ export function Navbar({
                       </Button>
                     </Link>
                   )}
+
+                  {/* My Orders Button */}
+                  <Link to="/orders">
+                    <Button variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50">
+                      <ShoppingBag className="w-4 h-4 mr-2" />
+                      {isRTL ? 'طلباتي' : 'My Orders'}
+                    </Button>
+                  </Link>
                   
                   {/* User Avatar Dropdown */}
                   <div className="relative">

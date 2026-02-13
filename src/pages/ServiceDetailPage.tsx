@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router';
+import { useParams, Link } from 'react-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Breadcrumb } from '../components/browse/Breadcrumb';
@@ -13,6 +14,7 @@ import { Button } from '../components/ui/button';
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { isRTL, toggleLanguage } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
 
   const [service, setService] = useState<ServiceResponse | null>(null);
   const [relatedServices, setRelatedServices] = useState<ServiceResponse[]>([]);
@@ -199,10 +201,19 @@ export function ServiceDetailPage() {
               )}
 
               {/* Order Button */}
-              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 text-lg">
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {isRTL ? 'اطلب الآن' : 'Order Now'}
-              </Button>
+              {user?.role === 'customer' || !isAuthenticated ? (
+                <Link to={isAuthenticated ? `/place-order/${id}` : `/login?redirect=/place-order/${id}`}>
+                  <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 text-lg">
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    {isRTL ? 'اطلب الآن' : 'Order Now'}
+                  </Button>
+                </Link>
+              ) : (
+                <Button disabled className="w-full bg-gray-400 text-white py-3 text-lg cursor-not-allowed">
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  {isRTL ? 'للعملاء فقط' : 'Customers Only'}
+                </Button>
+              )}
 
               {/* Stats */}
               <div className="mt-6 pt-6 border-t border-gray-200 space-y-3 text-sm text-gray-600">

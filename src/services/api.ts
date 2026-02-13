@@ -531,3 +531,418 @@ export const adminApi = {
     return handleResponse<ApiResponse>(response);
   },
 };
+
+// --- Order Types ---
+
+export interface OrderExpert {
+  id: string;
+  name: string;
+  avatar?: string;
+  rating?: number;
+}
+
+export interface OrderCustomer {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+export interface OrderResponse {
+  id: string;
+  serviceTitle: string;
+  thumbnail?: string;
+  price: number;
+  status: string;
+  orderDate: string;
+  deliveryDate?: string;
+  daysRemaining?: number;
+  requirements?: string;
+  expert?: OrderExpert;
+  customer?: OrderCustomer;
+  completedDate?: string;
+  deliveryMessage?: string;
+  declineReason?: string;
+  cancelReason?: string;
+  revisionReason?: string;
+  revisionDetails?: string;
+  extensionReason?: string;
+}
+
+export interface OrderListData {
+  orders: OrderResponse[];
+  pagination: PaginationResponse;
+  counts?: {
+    all: number;
+    pending: number;
+    inProgress: number;
+    delivered: number;
+    completed: number;
+    cancelled: number;
+    dispute?: number;
+    active: number;
+  };
+}
+
+export interface OrderRequest {
+  serviceId: number;
+  requirements?: string;
+  deliveryDeadline?: string;
+}
+
+export interface OrderCancelRequest {
+  reason: string;
+}
+
+export interface OrderDeclineRequest {
+  reason: string;
+}
+
+export interface OrderRevisionRequest {
+  reason: string;
+  details?: string;
+}
+
+export interface OrderExtendRequest {
+  additionalDays: number;
+  reason?: string;
+}
+
+export interface OrderStatusUpdateRequest {
+  status: string;
+}
+
+// Helper to normalize order from backend
+function normalizeOrder(o: any): OrderResponse {
+  return {
+    id: String(o.id ?? o.orderId),
+    serviceTitle: o.serviceTitle || o.service?.title || o.service?.serviceName || '',
+    thumbnail: o.thumbnail || o.service?.thumbnail ? 
+      ((o.thumbnail || o.service?.thumbnail).startsWith('http') 
+        ? (o.thumbnail || o.service?.thumbnail) 
+        : `${API_BASE_URL.replace('/api', '')}${o.thumbnail || o.service?.thumbnail}`) 
+      : undefined,
+    price: o.price ?? o.totalAmount ?? 0,
+    status: o.status?.toLowerCase() || o.orderStatus?.toLowerCase() || 'pending',
+    orderDate: o.orderDate || '',
+    deliveryDate: o.deliveryDate || o.deliveryDeadline || undefined,
+    daysRemaining: o.daysRemaining,
+    requirements: o.requirements,
+    expert: o.expert ? {
+      id: String(o.expert.id || o.expert.expertId || ''),
+      name: o.expert.name || '',
+      avatar: o.expert.avatar,
+      rating: o.expert.rating,
+    } : undefined,
+    customer: o.customer ? {
+      id: String(o.customer.id || o.customer.customerId || ''),
+      name: o.customer.name || '',
+      avatar: o.customer.avatar,
+    } : undefined,
+    completedDate: o.completedDate,
+    deliveryMessage: o.deliveryMessage,
+    declineReason: o.declineReason,
+    cancelReason: o.cancelReason,
+    revisionReason: o.revisionReason,
+    revisionDetails: o.revisionDetails,
+    extensionReason: o.extensionReason,
+  };
+}
+
+// Helper to extract numeric order ID from "ORD-123" format
+function getNumericOrderId(orderId: string): string {
+  // Strip "ORD-" prefix if present
+  return orderId.replace(/^ORD-/i, '');
+}
+
+// --- Order API ---
+
+export const orderApi = {
+  // Place a new order (CUSTOMER only)
+  async placeOrder(data: OrderRequest): Promise<ApiResponse<{ orderId: string }>> {
+    const response = await fetch(`${API_BASE_URL}/orders`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<ApiResponse<{ orderId: string }>>(response);
+  },
+
+  // Get order by ID
+  async getById(orderId: string): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Get my orders (CUSTOMER)
+  async getMyOrders(params: { status?: string; page?: number; limit?: number } = {}): Promise<ApiResponse<OrderListData>> {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== 'all') query.set('status', params.status);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+
+    const url = `${API_BASE_URL}/orders/my-orders${query.toString() ? '?' + query.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    const rawOrders = Array.isArray(res.data) ? res.data : (res.data?.orders || []);
+    const orders = rawOrders.map(normalizeOrder);
+
+    return {
+      ...res,
+      data: {
+        orders,
+        pagination: res.data?.pagination || {
+          currentPage: params.page || 1,
+          totalPages: 1,
+          totalItems: orders.length,
+          itemsPerPage: params.limit || orders.length,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        counts: res.data?.counts,
+      },
+    };
+  },
+
+  // Get expert orders (EXPERT)
+  async getExpertOrders(params: { status?: string; page?: number; limit?: number } = {}): Promise<ApiResponse<OrderListData>> {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== 'all') query.set('status', params.status);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+
+    const url = `${API_BASE_URL}/orders/expert-orders${query.toString() ? '?' + query.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    const rawOrders = Array.isArray(res.data) ? res.data : (res.data?.orders || []);
+    const orders = rawOrders.map(normalizeOrder);
+
+    return {
+      ...res,
+      data: {
+        orders,
+        pagination: res.data?.pagination || {
+          currentPage: params.page || 1,
+          totalPages: 1,
+          totalItems: orders.length,
+          itemsPerPage: params.limit || orders.length,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        counts: res.data?.counts,
+      },
+    };
+  },
+
+  // Accept order (EXPERT)
+  async acceptOrder(orderId: string): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/accept`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Decline order (EXPERT)
+  async declineOrder(orderId: string, data: OrderDeclineRequest): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/decline`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Deliver order (EXPERT)
+  async deliverOrder(orderId: string, message: string, files?: File[]): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const formData = new FormData();
+    formData.append('message', message);
+    if (files && files.length > 0) {
+      files.forEach(file => formData.append('files', file));
+    }
+
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/deliver`, {
+      method: 'POST',
+      headers: getAuthHeaders(false),
+      body: formData,
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Accept delivery (CUSTOMER)
+  async acceptDelivery(orderId: string): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/accept-delivery`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Request revision (CUSTOMER)
+  async requestRevision(orderId: string, data: OrderRevisionRequest): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/revision`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Cancel order
+  async cancelOrder(orderId: string, data: OrderCancelRequest): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/cancel`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Extend delivery time
+  async extendDelivery(orderId: string, data: OrderExtendRequest): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/extend`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+
+  // Update order status
+  async updateStatus(orderId: string, data: OrderStatusUpdateRequest): Promise<ApiResponse<OrderResponse>> {
+    const numericId = getNumericOrderId(orderId);
+    const response = await fetch(`${API_BASE_URL}/orders/${numericId}/status`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    return { ...res, data: normalizeOrder(res.data) };
+  },
+};
+
+// --- Notification Types ---
+
+export interface NotificationResponse {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListData {
+  notifications: NotificationResponse[];
+  unreadCount: number;
+  pagination: PaginationResponse;
+}
+
+// Helper to normalize notification
+function normalizeNotification(n: any): NotificationResponse {
+  return {
+    id: n.id ?? n.notificationId,
+    type: n.type || 'GENERAL',
+    title: n.title || '',
+    message: n.message || '',
+    isRead: n.isRead ?? n.read ?? (n.status === 'READ'),
+    createdAt: n.createdAt || new Date().toISOString(),
+  };
+}
+
+// --- Notification API ---
+
+export const notificationApi = {
+  // Get notifications
+  async getAll(params: { filter?: string; page?: number; limit?: number } = {}): Promise<ApiResponse<NotificationListData>> {
+    const query = new URLSearchParams();
+    if (params.filter) query.set('filter', params.filter);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+
+    const url = `${API_BASE_URL}/notifications${query.toString() ? '?' + query.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    const res = await handleResponse<ApiResponse<any>>(response);
+    const rawNotifications = Array.isArray(res.data) ? res.data : (res.data?.notifications || []);
+    const notifications = rawNotifications.map(normalizeNotification);
+
+    return {
+      ...res,
+      data: {
+        notifications,
+        unreadCount: res.data?.unreadCount ?? notifications.filter(n => !n.isRead).length,
+        pagination: res.data?.pagination || {
+          currentPage: params.page || 1,
+          totalPages: 1,
+          totalItems: notifications.length,
+          itemsPerPage: params.limit || notifications.length,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      },
+    };
+  },
+
+  // Mark notification as read
+  async markAsRead(notificationId: number): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<ApiResponse>(response);
+  },
+
+  // Mark all as read
+  async markAllAsRead(): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<ApiResponse>(response);
+  },
+
+  // Delete notification
+  async delete(notificationId: number): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<ApiResponse>(response);
+  },
+
+  // Clear all notifications
+  async clearAll(): Promise<ApiResponse> {
+    const response = await fetch(`${API_BASE_URL}/notifications`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<ApiResponse>(response);
+  },
+};

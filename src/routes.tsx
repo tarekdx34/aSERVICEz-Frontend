@@ -32,6 +32,7 @@ import { AdminPaymentsPage } from "./pages/AdminPaymentsPage";
 import { AdminServicesPage } from "./pages/AdminServicesPage";
 import { AdminCategoriesPage } from "./pages/AdminCategoriesPage";
 import { EditServicePage } from "./pages/EditServicePage";
+import { PlaceOrderPage } from "./pages/PlaceOrderPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -96,6 +97,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <OrderPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/place-order/:id",
+    element: (
+      <ProtectedRoute requiredRole="customer">
+        <PlaceOrderPage />
       </ProtectedRoute>
     ),
   },
